@@ -6,7 +6,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0e0e1a">
-  <title>Piping Chat</title>
+  <title>PGO Chat</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230084ff'/><text x='50' y='68' font-size='55' font-weight='bold' text-anchor='middle' fill='white'>PG</text></svg>" type="image/svg+xml">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
     html { height: 100%; overflow-x: hidden; }
@@ -434,7 +435,7 @@
       #menu-toggle { display:none; }
       #sidebar { display:none; }
       body::after {
-        content:'⚠️ Ваш экран слишком маленький (менее 280px). Piping Chat требует экран от 320px.';
+        content:'⚠️ Ваш экран слишком маленький (менее 280px). PGO Chat требует экран от 320px.';
         display:flex; align-items:center; justify-content:center;
         position:fixed; inset:0; padding:20px; text-align:center;
         background:var(--bg-body); color:var(--text-dim); font-size:14px; line-height:1.5;
@@ -528,14 +529,8 @@
   <div id="onboarding">
     <div id="onboarding-container">
       <div class="onboarding-step active" data-step="0">
-        <div style="font-size:64px; margin-bottom:20px;">💬</div>
-        <h1 style="font-size:32px; margin-bottom:8px;">Добро пожаловать</h1>
-        <p style="color:var(--text-dim); font-size:16px; max-width:400px;">Ваш безопасный и простой мессенджер на основе Piping Server</p>
-        <button class="onboarding-next" style="margin-top:30px; background:var(--accent); color:#fff; border:none; padding:12px 40px; border-radius:30px; font-size:16px; font-weight:600; cursor:pointer;">Далее →</button>
-      </div>
-      <div class="onboarding-step" data-step="1">
         <div style="font-size:64px; margin-bottom:20px;">📱💻</div>
-        <h2 style="font-size:24px; margin-bottom:8px;">С какого устройства?</h2>
+        <h1 style="font-size:28px; margin-bottom:8px;">С какого устройства вы?</h1>
         <p style="color:var(--text-dim); font-size:14px; margin-bottom:24px;">Выберите правильный вариант — это определит дизайн интерфейса</p>
         <div id="onboarding-device" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
           <div class="device-option" data-device="mobile" style="padding:16px 20px; border:2px solid var(--border); border-radius:12px; cursor:pointer; width:140px; transition: border-color 0.2s;">
@@ -553,9 +548,17 @@
         </div>
         <p id="device-error" style="color:#e74c3c; font-size:13px; margin-top:12px; min-height:20px;"></p>
         <p style="font-size:12px; color:var(--text-dimmer); margin-top:8px;">Изменить позже можно в настройках</p>
+        <div style="margin-top:30px;">
+          <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:12px 40px; border-radius:30px; font-size:16px; font-weight:600; cursor:pointer;">Далее →</button>
+        </div>
+      </div>
+      <div class="onboarding-step" data-step="1">
+        <div style="font-size:64px; margin-bottom:20px;">💬</div>
+        <h1 style="font-size:32px; margin-bottom:8px;">Добро пожаловать в PGO Chat</h1>
+        <p style="color:var(--text-dim); font-size:16px; max-width:400px;">Ваш безопасный и простой мессенджер на основе Piping Server</p>
         <div style="margin-top:30px; display:flex; gap:12px;">
           <button class="onboarding-back" style="background:transparent; color:var(--text-dim); border:1px solid var(--border); padding:10px 24px; border-radius:30px; cursor:pointer;">← Назад</button>
-          <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:10px 32px; border-radius:30px; font-weight:600; cursor:pointer;">Далее →</button>
+          <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:12px 40px; border-radius:30px; font-size:16px; font-weight:600; cursor:pointer;">Далее →</button>
         </div>
       </div>
       <div class="onboarding-step" data-step="2">
@@ -626,7 +629,7 @@
 
   <div id="login-modal" class="hidden">
     <div id="login-box">
-      <h2>Piping Chat</h2>
+      <h2>PGO Chat</h2>
       <p>Введите имя пользователя</p>
       <input id="input-name" placeholder="Ваше имя" maxlength="20">
       <button id="login-btn">Начать</button>
@@ -706,7 +709,7 @@
   <div id="app-row">
   <div id="sidebar">
     <div id="sidebar-header">
-      <h3>Piping Chat <button id="theme-toggle" title="Тема">☀</button></h3>
+      <h3>PGO Chat <button id="theme-toggle" title="Тема">☀</button></h3>
       <button id="new-chat-btn">+ Новый чат</button>
       <button id="new-group-btn" style="margin-top:4px;background:transparent;border:1px solid var(--accent);color:var(--accent);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;width:100%;font-weight:600;">👥 Создать группу</button>
       <div id="join-area">

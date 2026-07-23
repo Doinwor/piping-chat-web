@@ -199,9 +199,10 @@ function initOnboarding() {
 function goToStep(step) {
   const steps = document.querySelectorAll('.onboarding-step');
   if (step < 0 || step >= steps.length) return;
-  if (step > currentStep && currentStep === 1) {
+  if (step > currentStep && currentStep === 0) {
     if (!selectedDevice) { document.getElementById('device-error').textContent = 'Пожалуйста, выберите устройство!'; return; }
     document.getElementById('device-error').textContent = '';
+    applyDeviceMode(selectedDevice);
   }
   if (step > currentStep && currentStep === 4) {
     const nameInput = document.getElementById('onboarding-name');
@@ -310,13 +311,14 @@ function sendVoiceMsg(audioSrc) {
   const msg = { id: genId(), type: 'audio', from: myName, fromUuid: myUuid, src: audioSrc, timestamp: Date.now(), status: 'sending' };
   createMsgEl(msg, true);
   receivedIds.add(msg.id);
-  if (history[activeRoom]) { history[activeRoom].push(msg); saveHistory(activeRoom); }
-  updateChatLastMsg(activeRoom, myName, '[голосовое]');
-  const encMsg = { ...msg, src: xorCode(audioSrc, activeRoom) };
+  const msgRoom = activeRoom;
+  if (history[msgRoom]) { history[msgRoom].push(msg); saveHistory(msgRoom); }
+  updateChatLastMsg(msgRoom, myName, '[голосовое]');
+  const encMsg = { ...msg, src: xorCode(audioSrc, msgRoom) };
   for (const p of Object.values(peers)) post(p.path, encMsg);
   setTimeout(() => {
-    const m = history[activeRoom]?.find(x => x.id === msg.id);
-    if (m && m.status === 'sending') { m.status = 'sent'; saveHistory(activeRoom); updateMessageStatusUI(msg.id); }
+    const m = history[msgRoom]?.find(x => x.id === msg.id);
+    if (m && m.status === 'sending') { m.status = 'sent'; saveHistory(msgRoom); updateMessageStatusUI(msg.id); }
   }, 1500);
 
 }
@@ -393,7 +395,7 @@ function clearUnread(room) {
 function updateWindowTitle() {
   let total = 0;
   for (const v of Object.values(unreadCounts)) total += v;
-  const title = total > 0 ? `(${total}) Piping Chat` : 'Piping Chat';
+  const title = total > 0 ? `(${total}) PGO Chat` : 'PGO Chat';
   document.title = title;
   if (titlebarText) titlebarText.textContent = title;
 }
@@ -1762,14 +1764,15 @@ function processImageFile(file) {
       const msg = { id: genId(), type: 'image', from: myName, fromUuid: myUuid, src, timestamp: Date.now(), replyTo: rpl, status: 'sending' };
       createMsgEl(msg, true);
       receivedIds.add(msg.id);
-      if (history[activeRoom]) { history[activeRoom].push(msg); saveHistory(activeRoom); }
-      updateChatLastMsg(activeRoom, myName, '[изображение]');
-      const encMsg = { ...msg, src: xorCode(src, activeRoom), replyTo: encRpl };
+      const msgRoom = activeRoom;
+      if (history[msgRoom]) { history[msgRoom].push(msg); saveHistory(msgRoom); }
+      updateChatLastMsg(msgRoom, myName, '[изображение]');
+      const encMsg = { ...msg, src: xorCode(src, msgRoom), replyTo: encRpl };
       for (const p of Object.values(peers)) post(p.path, encMsg);
       hideReplyBar();
       setTimeout(() => {
-        const m = history[activeRoom]?.find(x => x.id === msg.id);
-        if (m && m.status === 'sending') { m.status = 'sent'; saveHistory(activeRoom); updateMessageStatusUI(msg.id); }
+        const m = history[msgRoom]?.find(x => x.id === msg.id);
+        if (m && m.status === 'sending') { m.status = 'sent'; saveHistory(msgRoom); updateMessageStatusUI(msg.id); }
       }, 1500);
     
     };
@@ -1794,18 +1797,19 @@ function sendMsg() {
   const msg = { id: genId(), type: 'text', from: myName, fromUuid: myUuid, text, timestamp: Date.now(), replyTo: rpl, status: 'sending' };
   createMsgEl(msg, true);
   receivedIds.add(msg.id);
-  if (history[activeRoom]) { history[activeRoom].push(msg); saveHistory(activeRoom); }
-  updateChatLastMsg(activeRoom, myName, text);
+  const msgRoom = activeRoom;
+  if (history[msgRoom]) { history[msgRoom].push(msg); saveHistory(msgRoom); }
+  updateChatLastMsg(msgRoom, myName, text);
   textInput.value = '';
   hideReplyBar();
   textInput.placeholder = 'Сообщение...';
-  const encRpl = rpl ? { id: rpl.id, from: rpl.from, text: rpl.text ? xorCode(rpl.text, activeRoom) : null } : null;
-  const encMsg = { ...msg, text: xorCode(text, activeRoom), replyTo: encRpl };
+  const encRpl = rpl ? { id: rpl.id, from: rpl.from, text: rpl.text ? xorCode(rpl.text, msgRoom) : null } : null;
+  const encMsg = { ...msg, text: xorCode(text, msgRoom), replyTo: encRpl };
   for (const p of Object.values(peers)) post(p.path, encMsg);
   setTimeout(() => {
-    if (history[activeRoom]) {
-      const m = history[activeRoom].find(x => x.id === msg.id);
-      if (m && m.status === 'sending') { m.status = 'sent'; saveHistory(activeRoom); updateMessageStatusUI(msg.id); }
+    if (history[msgRoom]) {
+      const m = history[msgRoom].find(x => x.id === msg.id);
+      if (m && m.status === 'sending') { m.status = 'sent'; saveHistory(msgRoom); updateMessageStatusUI(msg.id); }
     }
   }, 1500);
 
