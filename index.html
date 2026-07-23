@@ -9,6 +9,7 @@
   <title>Piping Chat</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    html { height: 100%; overflow-x: hidden; }
 
     :root {
       --bg-body: #0e0e1a; --bg-sidebar: #13132a; --bg-main: #0e0e1a;
@@ -33,7 +34,7 @@
       --scrollbar: #ccc; --ctx-sep: #e8e8e8;
     }
 
-    body { height: 100vh; display: flex; flex-direction: column; background: var(--bg-body); color: var(--text); overflow: hidden; }
+    body { height: 100vh; height: 100dvh; display: flex; flex-direction: column; background: var(--bg-body); color: var(--text); overflow: hidden; }
 
     #app-row { display: flex; flex: 1; overflow: hidden; }
 
@@ -279,13 +280,13 @@
 
     /* ===== MOBILE: <=768px ===== */
     @media (max-width: 768px) {
-      body { font-size:16px; }
+      body { font-size:16px; overflow-x:hidden; }
 
       #menu-toggle { display:flex; }
 
       /* Sidebar → slide-out drawer */
       #sidebar {
-        position:fixed !important; left:0; top:0; height:100%; width:300px; z-index:1000;
+        position:fixed !important; left:0; top:0; height:100%; height:100dvh; width:280px; z-index:1000;
         transform:translateX(-100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
         box-shadow:none;
       }
@@ -298,7 +299,7 @@
       #join-input { padding:12px 14px; font-size:15px; border-radius:10px; }
       #join-btn { padding:12px 18px; font-size:14px; border-radius:10px; }
 
-      /* Chat list items — bigger touch targets */
+      /* Chat list items */
       .chat-item { padding:14px 12px; gap:12px; border-radius:12px; }
       .chat-avatar { width:48px; height:48px; font-size:18px; }
       .chat-info .chat-name { font-size:15px; }
@@ -309,22 +310,31 @@
       /* Sidebar footer */
       #sidebar-footer { padding:16px; font-size:15px; }
 
-      /* Main area */
-      #app-row, #main { width:100%; height:100%; }
+      /* Main area — fill screen */
+      #app-row, #main { width:100%; height:100%; height:100dvh; }
 
-      /* Topbar — mobile style */
-      #topbar { padding:10px 12px; min-height:56px; }
-      #topbar-left { gap:10px; }
-      #topbar-left > div { min-width:0; }
-      #group-name { font-size:17px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; }
-      #group-subtitle { font-size:12px; }
+      /* Topbar — compact on mobile */
+      #topbar { padding:8px 10px; min-height:52px; gap:6px; flex-wrap:nowrap; }
+      #topbar-left { gap:8px; min-width:0; flex:1; }
+      #topbar-left > div { min-width:0; flex:1; }
+      #group-name { font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:none; }
+      #group-subtitle { font-size:11px; }
       #clock { display:none; }
-      .topbar-btn { padding:8px 14px; font-size:13px; min-height:38px; }
-      #lock-btn { display:none; }
 
-      /* Search panel */
-      #search-panel { padding:8px 12px; }
+      /* Topbar right — smaller buttons, hide less important */
+      #topbar-right { gap:4px; flex-shrink:0; }
+      .topbar-btn { padding:6px 10px; font-size:12px; min-height:36px; white-space:nowrap; }
+      #lock-btn { display:none; }
+      #group-manage-btn { display:none !important; }
+      #participants-toggle { font-size:11px; padding:6px 8px; }
+
+      /* Search panel — stack vertically on small screens */
+      #search-panel { padding:8px 10px; gap:6px; }
+      #search-main-row { gap:6px; }
       #search-input { padding:10px 14px; font-size:15px; border-radius:20px; }
+      #search-filters { gap:6px; flex-wrap:wrap; }
+      #search-filters input, #search-filters label { font-size:11px !important; }
+      #search-sender { width:120px !important; }
 
       /* Messages — chat bubble style */
       #messages { padding:10px 8px; gap:2px; }
@@ -341,30 +351,33 @@
 
       /* Input area — bottom bar, big buttons */
       #input-area {
-        padding:8px 10px;
+        padding:8px 8px;
         padding-bottom: max(8px, env(safe-area-inset-bottom));
-        gap:8px;
+        gap:6px;
         background:var(--bg-topbar);
         border-top:1px solid var(--border);
+        flex-wrap:nowrap;
       }
       #textInput {
-        flex:1; padding:12px 16px; font-size:16px;
-        border-radius:24px; min-height:44px;
+        flex:1; padding:10px 14px; font-size:16px;
+        border-radius:24px; min-height:42px; min-width:0;
       }
-      #emojiBtn, #voiceBtn { width:44px; height:44px; padding:0; font-size:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
-      #fileBtn { width:44px; height:44px; padding:0; font-size:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
-      #sendBtn { width:44px; height:44px; padding:0; font-size:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+      #emojiBtn, #voiceBtn, #fileBtn, #sendBtn {
+        width:42px; height:42px; padding:0; font-size:18px;
+        border-radius:50%; display:flex; align-items:center; justify-content:center;
+        flex-shrink:0;
+      }
 
       /* Reply bar */
-      #reply-bar { padding:10px 12px; font-size:14px; }
+      #reply-bar { padding:10px 10px; font-size:13px; }
 
       /* Emoji picker */
-      #emoji-picker { bottom:70px; left:10px; max-width:280px; padding:8px; }
+      #emoji-picker { bottom:64px; left:8px; max-width:260px; padding:8px; }
       #emoji-picker .emoji-grid { grid-template-columns:repeat(7, 1fr); }
-      #emoji-picker .emoji-item { font-size:22px; padding:6px; }
+      #emoji-picker .emoji-item { font-size:20px; padding:6px; }
 
       /* Participants panel */
-      #participants-panel { top:56px; right:10px; min-width:200px; padding:12px; }
+      #participants-panel { top:52px; right:8px; min-width:180px; padding:10px; }
 
       /* Modals — full width on mobile */
       #forward-box, #export-box, #group-modal-box, #create-group-box, #pin-box, #login-box {
@@ -372,9 +385,6 @@
         max-width:400px;
         padding:20px;
         margin:16px;
-      }
-      #forward-modal, #export-modal, #group-modal, #create-group-modal, #pin-modal {
-        padding:16px;
       }
 
       /* Settings page — full mobile */
@@ -388,31 +398,47 @@
       .settings-select { font-size:15px; padding:10px 14px; }
 
       /* Toast */
-      #toast-container { bottom:70px; right:12px; left:12px; }
-      .toast { max-width:100%; font-size:14px; padding:12px 16px; border-radius:10px; }
+      #toast-container { bottom:64px; right:8px; left:8px; }
+      .toast { max-width:100%; font-size:14px; padding:12px 14px; border-radius:10px; }
 
       /* Context menu */
-      #ctx-menu { min-width:200px; border-radius:14px; padding:8px 0; }
-      #ctx-menu .ctx-item { padding:14px 18px; font-size:15px; }
+      #ctx-menu { min-width:180px; border-radius:14px; padding:8px 0; }
+      #ctx-menu .ctx-item { padding:14px 16px; font-size:15px; }
 
       /* Image viewer */
       #img-viewer-img { max-width:100vw; max-height:80vh; }
       #img-viewer-close { top:12px; right:12px; width:40px; height:40px; font-size:28px; }
 
       /* Onboarding */
-      #onboarding-container { padding:24px 16px; }
-      .onboarding-step h1 { font-size:28px; }
-      .onboarding-step h2 { font-size:22px; }
-      .theme-option { width:130px; padding:12px; }
+      #onboarding-container { padding:20px 16px; }
+      .onboarding-step h1 { font-size:24px; }
+      .onboarding-step h2 { font-size:20px; }
+      .theme-option { width:120px; padding:10px; }
     }
 
     /* ===== SMALL PHONES: <=380px ===== */
     @media (max-width: 380px) {
       .message { max-width:88%; font-size:14px; padding:8px 12px; }
-      .chat-avatar { width:42px; height:42px; font-size:16px; }
-      .chat-info .chat-name { font-size:14px; }
-      #group-name { font-size:15px; max-width:140px; }
-      .topbar-btn { padding:6px 10px; font-size:12px; }
+      .chat-avatar { width:40px; height:40px; font-size:15px; }
+      .chat-info .chat-name { font-size:13px; }
+      #group-name { font-size:14px; }
+      .topbar-btn { font-size:11px; padding:5px 8px; min-height:34px; }
+      #textInput { font-size:15px; min-height:40px; }
+      #emojiBtn, #voiceBtn, #fileBtn, #sendBtn { width:40px; height:40px; font-size:16px; }
+      #participants-toggle { display:none; }
+    }
+
+    /* ===== TINY SCREENS: <=280px — warning ===== */
+    @media (max-width: 280px) {
+      #app-row { display:none; }
+      #menu-toggle { display:none; }
+      #sidebar { display:none; }
+      body::after {
+        content:'⚠️ Ваш экран слишком маленький (менее 280px). Piping Chat требует экран от 320px.';
+        display:flex; align-items:center; justify-content:center;
+        position:fixed; inset:0; padding:20px; text-align:center;
+        background:var(--bg-body); color:var(--text-dim); font-size:14px; line-height:1.5;
+      }
     }
 
     /* Onboarding */
