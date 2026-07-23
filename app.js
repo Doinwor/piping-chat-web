@@ -138,6 +138,7 @@ const onboardingSteps = document.querySelectorAll('.onboarding-step');
 let currentStep = 0;
 let selectedLanguage = 'ru';
 let selectedTheme = 'dark';
+let selectedDevice = '';
 const languages = [
   { code: 'ru', name: 'Русский', flag: '🇷🇺' },
   { code: 'en', name: 'English', flag: '🇬🇧' },
@@ -179,6 +180,13 @@ function initOnboarding() {
     };
     if (el.dataset.theme === selectedTheme) el.style.borderColor = 'var(--accent)';
   });
+  document.querySelectorAll('.device-option').forEach(el => {
+    el.onclick = () => {
+      selectedDevice = el.dataset.device;
+      document.querySelectorAll('.device-option').forEach(e => e.style.borderColor = 'var(--border)');
+      el.style.borderColor = 'var(--accent)';
+    };
+  });
   document.querySelectorAll('.onboarding-next').forEach(btn => {
     btn.onclick = () => goToStep(currentStep + 1);
   });
@@ -191,7 +199,11 @@ function initOnboarding() {
 function goToStep(step) {
   const steps = document.querySelectorAll('.onboarding-step');
   if (step < 0 || step >= steps.length) return;
-  if (step > currentStep && currentStep === 3) {
+  if (step > currentStep && currentStep === 1) {
+    if (!selectedDevice) { document.getElementById('device-error').textContent = 'Пожалуйста, выберите устройство!'; return; }
+    document.getElementById('device-error').textContent = '';
+  }
+  if (step > currentStep && currentStep === 4) {
     const nameInput = document.getElementById('onboarding-name');
     const name = nameInput.value.trim();
     if (!name) { document.getElementById('onboarding-name-error').textContent = 'Пожалуйста, введите имя'; return; }
@@ -210,7 +222,8 @@ function finishOnboarding() {
   myName = name;
   if (!myUuid) myUuid = uuidv4();
   applyTheme(selectedTheme === 'light');
-  localStorage.setItem(localStorageKey('state'), JSON.stringify({ uuid: myUuid, name: myName, chats: {}, theme: selectedTheme === 'light', unread: {}, pin: null, onboardingDone: true, autoLockMinutes: 0 }));
+  localStorage.setItem(localStorageKey('state'), JSON.stringify({ uuid: myUuid, name: myName, chats: {}, theme: selectedTheme === 'light', unread: {}, pin: null, onboardingDone: true, autoLockMinutes: 0, deviceMode: selectedDevice }));
+  applyDeviceMode(selectedDevice);
   onboardingContainer.style.display = 'none';
   onboardingContainer.classList.remove('show');
   loginModal.classList.add('hidden');
@@ -409,8 +422,14 @@ function localStorageKey(key) { return 'pc_' + key; }
 let autoLockMinutes = 0;
 let autoLockTimer = null;
 
+function applyDeviceMode(mode) {
+  document.body.classList.remove('force-mobile', 'force-desktop');
+  if (mode === 'mobile') document.body.classList.add('force-mobile');
+  else if (mode === 'desktop') document.body.classList.add('force-desktop');
+}
 function saveState() {
-  try { localStorage.setItem(localStorageKey('state'), JSON.stringify({ uuid: myUuid, name: myName, chats, theme: isLightTheme, unread: unreadCounts, pin: appPin, autoLockMinutes, onboardingDone: !!myName })); } catch (e) { console.error('saveState error:', e); }
+  const deviceMode = document.body.classList.contains('force-mobile') ? 'mobile' : document.body.classList.contains('force-desktop') ? 'desktop' : '';
+  try { localStorage.setItem(localStorageKey('state'), JSON.stringify({ uuid: myUuid, name: myName, chats, theme: isLightTheme, unread: unreadCounts, pin: appPin, autoLockMinutes, onboardingDone: !!myName, deviceMode })); } catch (e) { console.error('saveState error:', e); }
 }
 function loadState() {
   try {
@@ -424,6 +443,7 @@ function loadState() {
     if (s.unread) unreadCounts = s.unread;
     if (s.pin) appPin = s.pin;
     if (s.autoLockMinutes !== undefined) autoLockMinutes = s.autoLockMinutes;
+    if (s.deviceMode) applyDeviceMode(s.deviceMode);
     if (s.onboardingDone && s.name) {
       if (!myUuid) { myUuid = uuidv4(); }
       for (const room of Object.keys(chats)) {
@@ -750,6 +770,7 @@ function showSettings() {
   settingsAvatar.style.background = getAvatarColor(myName);
   settingsAvatar.textContent = myName[0].toUpperCase();
   settingsThemeSelect.value = isLightTheme ? 'light' : 'dark';
+  if (settingsDeviceSelect) settingsDeviceSelect.value = document.body.classList.contains('force-mobile') ? 'mobile' : document.body.classList.contains('force-desktop') ? 'desktop' : '';
   settingsPinStatus.textContent = appPin ? 'Установлен' : 'Не установлен';
   settingsAutoLockSelect.value = autoLockMinutes;
   settingsRenameArea.classList.remove('show');
@@ -801,6 +822,15 @@ settingsThemeSelect.onchange = (e) => {
   applyTheme(light);
   saveState();
 };
+
+const settingsDeviceSelect = document.getElementById('settings-device-select');
+if (settingsDeviceSelect) {
+  settingsDeviceSelect.onchange = (e) => {
+    applyDeviceMode(e.target.value);
+    saveState();
+    showToast('Режим устройства изменён. Перезагрузите страницу для полного эффекта.');
+  };
+}
 
 settingsPinBtn.onclick = () => {
   const current = appPin || '';

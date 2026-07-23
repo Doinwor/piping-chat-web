@@ -441,6 +441,74 @@
       }
     }
 
+    /* ===== FORCE MOBILE — user chose "phone" ===== */
+    body.force-mobile #menu-toggle { display:flex; }
+    body.force-mobile #sidebar {
+      position:fixed !important; left:0; top:0; height:100%; height:100dvh; width:280px; z-index:1000;
+      transform:translateX(-100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      box-shadow:none; overflow:hidden;
+    }
+    body.force-mobile #sidebar.open { transform:translateX(0); box-shadow:4px 0 30px rgba(0,0,0,0.5); }
+    body.force-mobile #sidebar-header { padding:12px; overflow-y:auto; flex-shrink:0; }
+    body.force-mobile #sidebar-header h3 { font-size:16px; margin-bottom:10px; }
+    body.force-mobile #new-chat-btn { padding:14px; font-size:15px; border-radius:12px; width:100%; }
+    body.force-mobile #new-group-btn { padding:12px; font-size:13px; width:100%; }
+    body.force-mobile #join-area { display:flex; gap:8px; }
+    body.force-mobile #join-input { flex:1; min-width:0; padding:12px 14px; font-size:15px; border-radius:10px; }
+    body.force-mobile #join-btn { padding:12px 18px; font-size:14px; border-radius:10px; flex-shrink:0; }
+    body.force-mobile .chat-item { padding:14px 12px; gap:12px; border-radius:12px; }
+    body.force-mobile .chat-avatar { width:48px; height:48px; font-size:18px; }
+    body.force-mobile .chat-info .chat-name { font-size:15px; }
+    body.force-mobile .chat-info .chat-preview { font-size:13px; }
+    body.force-mobile #sidebar-footer { padding:16px; font-size:15px; }
+    body.force-mobile #app-row, body.force-mobile #main { width:100%; }
+    body.force-mobile #topbar { padding:8px 10px; min-height:52px; gap:6px; flex-wrap:nowrap; }
+    body.force-mobile #topbar-left { gap:8px; min-width:0; flex:1; }
+    body.force-mobile #topbar-left > div { min-width:0; flex:1; }
+    body.force-mobile #group-name { font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    body.force-mobile #group-subtitle { font-size:11px; }
+    body.force-mobile #clock { display:none; }
+    body.force-mobile #topbar-right { gap:4px; flex-shrink:0; }
+    body.force-mobile .topbar-btn { padding:6px 10px; font-size:12px; min-height:36px; white-space:nowrap; }
+    body.force-mobile #lock-btn, body.force-mobile #group-manage-btn { display:none !important; }
+    body.force-mobile #participants-toggle { font-size:11px; padding:6px 8px; }
+    body.force-mobile #search-panel { padding:8px 10px; gap:6px; }
+    body.force-mobile #search-input { padding:10px 14px; font-size:15px; border-radius:20px; }
+    body.force-mobile #messages { padding:10px 8px; gap:2px; }
+    body.force-mobile .message { max-width:82%; padding:10px 14px; font-size:15px; line-height:1.4; border-radius:18px; }
+    body.force-mobile .message.you { border-bottom-right-radius:4px; }
+    body.force-mobile .message.other { border-bottom-left-radius:4px; }
+    body.force-mobile .message img { max-width:260px; max-height:260px; }
+    body.force-mobile #input-area { padding:8px 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); gap:6px; flex-wrap:nowrap; }
+    body.force-mobile #textInput { flex:1; padding:10px 14px; font-size:16px; border-radius:24px; min-height:42px; min-width:0; }
+    body.force-mobile #emojiBtn, body.force-mobile #voiceBtn, body.force-mobile #fileBtn, body.force-mobile #sendBtn { width:42px; height:42px; padding:0; font-size:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    body.force-mobile #emoji-picker { bottom:64px; left:8px; max-width:260px; }
+    body.force-mobile #emoji-picker .emoji-grid { grid-template-columns:repeat(7, 1fr); }
+    body.force-mobile #participants-panel { top:52px; right:8px; min-width:180px; }
+    body.force-mobile #forward-box, body.force-mobile #export-box, body.force-mobile #group-modal-box, body.force-mobile #create-group-box, body.force-mobile #pin-box, body.force-mobile #login-box { width:calc(100% - 32px); max-width:400px; }
+    body.force-mobile #toast-container { bottom:64px; right:8px; left:8px; }
+
+    /* ===== FORCE DESKTOP — user chose "computer" ===== */
+    body.force-desktop #menu-toggle { display:none !important; }
+    body.force-desktop #sidebar-overlay { display:none !important; }
+    body.force-desktop #sidebar { position:static !important; transform:none !important; width:300px !important; box-shadow:none !important; }
+    body.force-desktop #app-row, body.force-desktop #main { width:auto !important; height:auto !important; }
+    body.force-desktop #topbar { padding:12px 20px !important; min-height:auto !important; flex-wrap:nowrap !important; }
+    body.force-desktop .topbar-btn { padding:5px 12px !important; font-size:12px !important; min-height:auto !important; white-space:nowrap !important; }
+    body.force-desktop #lock-btn { display:inline-flex !important; }
+    body.force-desktop #group-manage-btn { display:inline-flex !important; }
+    body.force-desktop #participants-toggle { display:inline-flex !important; font-size:12px !important; }
+    body.force-desktop #clock { display:inline !important; }
+    body.force-desktop .message { max-width:60% !important; font-size:14px !important; padding:10px 14px !important; border-radius:16px !important; }
+    body.force-desktop .message.you { border-bottom-right-radius:4px !important; }
+    body.force-desktop .message.other { border-bottom-left-radius:4px !important; }
+    body.force-desktop #input-area { padding:12px 16px !important; gap:10px !important; flex-wrap:nowrap !important; }
+    body.force-desktop #textInput { padding:11px 16px !important; font-size:14px !important; min-height:auto !important; min-width:0 !important; }
+    body.force-desktop #emojiBtn, body.force-desktop #voiceBtn, body.force-desktop #fileBtn, body.force-desktop #sendBtn { width:auto !important; height:auto !important; padding:11px 14px !important; font-size:13px !important; border-radius:22px !important; display:inline-flex !important; flex-shrink:auto !important; }
+    body.force-desktop #messages { padding:16px !important; gap:0 !important; }
+    body.force-mobile #sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; }
+    body.force-mobile #sidebar-overlay.show { display:block; }
+
     /* Onboarding */
     #onboarding { position:fixed; inset:0; background:var(--bg-body); z-index:9999; overflow-y:auto; display:none; }
     #onboarding.show { display:flex; flex-direction:column; }
@@ -466,6 +534,31 @@
         <button class="onboarding-next" style="margin-top:30px; background:var(--accent); color:#fff; border:none; padding:12px 40px; border-radius:30px; font-size:16px; font-weight:600; cursor:pointer;">Далее →</button>
       </div>
       <div class="onboarding-step" data-step="1">
+        <div style="font-size:64px; margin-bottom:20px;">📱💻</div>
+        <h2 style="font-size:24px; margin-bottom:8px;">С какого устройства?</h2>
+        <p style="color:var(--text-dim); font-size:14px; margin-bottom:24px;">Выберите правильный вариант — это определит дизайн интерфейса</p>
+        <div id="onboarding-device" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
+          <div class="device-option" data-device="mobile" style="padding:16px 20px; border:2px solid var(--border); border-radius:12px; cursor:pointer; width:140px; transition: border-color 0.2s;">
+            <div style="background:var(--bg-msg-other); border-radius:8px; padding:12px; display:flex; flex-direction:column; align-items:center;">
+              <div style="font-size:28px;">📱</div>
+              <div style="font-size:14px; margin-top:4px; color:var(--text);">Телефон</div>
+            </div>
+          </div>
+          <div class="device-option" data-device="desktop" style="padding:16px 20px; border:2px solid var(--border); border-radius:12px; cursor:pointer; width:140px; transition: border-color 0.2s;">
+            <div style="background:var(--bg-msg-other); border-radius:8px; padding:12px; display:flex; flex-direction:column; align-items:center;">
+              <div style="font-size:28px;">💻</div>
+              <div style="font-size:14px; margin-top:4px; color:var(--text);">Компьютер</div>
+            </div>
+          </div>
+        </div>
+        <p id="device-error" style="color:#e74c3c; font-size:13px; margin-top:12px; min-height:20px;"></p>
+        <p style="font-size:12px; color:var(--text-dimmer); margin-top:8px;">Изменить позже можно в настройках</p>
+        <div style="margin-top:30px; display:flex; gap:12px;">
+          <button class="onboarding-back" style="background:transparent; color:var(--text-dim); border:1px solid var(--border); padding:10px 24px; border-radius:30px; cursor:pointer;">← Назад</button>
+          <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:10px 32px; border-radius:30px; font-weight:600; cursor:pointer;">Далее →</button>
+        </div>
+      </div>
+      <div class="onboarding-step" data-step="2">
         <h2 style="font-size:24px; margin-bottom:8px;">Выберите язык</h2>
         <p style="color:var(--text-dim); font-size:14px; margin-bottom:24px;">Выберите язык интерфейса</p>
         <div id="onboarding-languages" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:480px;"></div>
@@ -474,7 +567,7 @@
           <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:10px 32px; border-radius:30px; font-weight:600; cursor:pointer;">Далее →</button>
         </div>
       </div>
-      <div class="onboarding-step" data-step="2">
+      <div class="onboarding-step" data-step="3">
         <h2 style="font-size:24px; margin-bottom:8px;">Выберите тему</h2>
         <p style="color:var(--text-dim); font-size:14px; margin-bottom:24px;">Светлая или тёмная</p>
         <div style="display:flex; gap:20px;">
@@ -496,7 +589,7 @@
           <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:10px 32px; border-radius:30px; font-weight:600; cursor:pointer;">Далее →</button>
         </div>
       </div>
-      <div class="onboarding-step" data-step="3">
+      <div class="onboarding-step" data-step="4">
         <h2 style="font-size:24px; margin-bottom:8px;">Ваше имя</h2>
         <p style="color:var(--text-dim); font-size:14px; margin-bottom:24px;">Как к вам обращаться в чатах?</p>
         <input id="onboarding-name" type="text" maxlength="20" placeholder="Введите имя" style="width:100%; max-width:300px; padding:12px 16px; border:1px solid var(--border); border-radius:10px; background:var(--bg-input); color:var(--text); font-size:16px; text-align:center; outline:none;">
@@ -506,7 +599,7 @@
           <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:10px 32px; border-radius:30px; font-weight:600; cursor:pointer;">Далее →</button>
         </div>
       </div>
-      <div class="onboarding-step" data-step="4">
+      <div class="onboarding-step" data-step="5">
         <h2 style="font-size:24px; margin-bottom:16px;">Как это работает</h2>
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; max-width:500px; margin-bottom:24px;">
           <div style="background:var(--bg-msg-other); border-radius:12px; padding:16px; border:1px solid var(--border);">
@@ -723,6 +816,19 @@
 
           <div class="settings-section">
             <div class="settings-section-title">Внешний вид</div>
+            <div class="settings-row">
+              <div class="sr-left">
+                <span class="sr-label">Устройство</span>
+                <span class="sr-desc">Мобильный или десктопный интерфейс</span>
+              </div>
+              <div class="sr-right">
+                <select class="settings-select" id="settings-device-select">
+                  <option value="">Авто (по экрану)</option>
+                  <option value="mobile">Телефон</option>
+                  <option value="desktop">Компьютер</option>
+                </select>
+              </div>
+            </div>
             <div class="settings-row">
               <div class="sr-left">
                 <span class="sr-label">Тема</span>
