@@ -1581,16 +1581,16 @@ function checkStale() {
   const now = Date.now();
   let changed = false;
   for (const [uuid, p] of Object.entries(peers)) {
-    if (p.online && (now - p.lastSeen) > 60000) {
+    if (p.online && (now - p.lastSeen) > 25000) {
       p.online = false;
       p.peerStatus = 'offline';
       if (!isGroupCode(activeRoom) && chats[activeRoom]) chats[activeRoom].peerStatus = 'offline';
       changed = true;
       addSystem(`${p.name} не в сети`);
-      showToast(`${p.name} не в сети — возможно, закрыл приложение`);
+      showToast(`${p.name} не в сети — сообщения будут доставлены при подключении`);
     }
   }
-  if (changed) renderParticipants();
+  if (changed) { renderParticipants(); renderChatList(); }
 }
 
 
@@ -1635,7 +1635,7 @@ function connect() {
   listen();
   timers.push(setInterval(pollAnnounce, 3000));
   timers.push(setInterval(pollJoin, 2000));
-  timers.push(setInterval(sendPing, 10000));
+  timers.push(setInterval(sendPing, 5000));
   timers.push(setInterval(checkStale, 5000));
   timers.push(setInterval(() => {
     if (connected) post(announcePath, { type: 'announce', from: myName, fromUuid: myUuid, personalPath: myPath });
@@ -1996,6 +1996,37 @@ window.addEventListener('beforeunload', () => {
     }
   }
 });
+
+// === Visibility API — faster online/offline detection ===
+let hiddenPingTimer = null;
+function sendOfflineStatus() {
+  if (!connected || !myName || !myUuid) return;
+  const msg = { type: 'status', from: myName, fromUuid: myUuid, online: false, timestamp: Date.now() };
+  for (const p of Object.values(peers)) {
+    try { navigator.sendBeacon(BASE + p.path, JSON.stringify(msg)); } catch (e) {}
+    try { post(p.path, msg); } catch (e) {}
+  }
+}
+function sendOnlineStatus() {
+  if (!connected || !myName || !myUuid) return;
+  const msg = { type: 'status', from: myName, fromUuid: myUuid, online: true, timestamp: Date.now() };
+  for (const p of Object.values(peers)) {
+    try { post(p.path, msg); } catch (e) {}
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    sendOfflineStatus();
+    if (hiddenPingTimer) clearInterval(hiddenPingTimer);
+    hiddenPingTimer = setInterval(() => {
+      if (document.hidden && connected) sendOfflineStatus();
+    }, 5000);
+  } else {
+    if (hiddenPingTimer) { clearInterval(hiddenPingTimer); hiddenPingTimer = null; }
+    sendOnlineStatus();
+  }
+});
+window.addEventListener('pagehide', sendOfflineStatus);
 
 // === Mobile sidebar ===
 const menuToggle = document.getElementById('menu-toggle');
