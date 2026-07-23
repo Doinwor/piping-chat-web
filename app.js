@@ -1613,7 +1613,7 @@ function checkStale() {
   const now = Date.now();
   let changed = false;
   for (const [uuid, p] of Object.entries(peers)) {
-    if (p.online && (now - p.lastSeen) > 25000) {
+    if (p.online && (now - p.lastSeen) > 45000) {
       p.online = false;
       p.peerStatus = 'offline';
       if (!isGroupCode(activeRoom) && chats[activeRoom]) chats[activeRoom].peerStatus = 'offline';
@@ -1667,8 +1667,8 @@ function connect() {
   listen();
   timers.push(setInterval(pollAnnounce, 3000));
   timers.push(setInterval(pollJoin, 2000));
-  timers.push(setInterval(sendPing, 5000));
-  timers.push(setInterval(checkStale, 5000));
+  timers.push(setInterval(sendPing, 10000));
+  timers.push(setInterval(checkStale, 10000));
   timers.push(setInterval(() => {
     if (connected) post(announcePath, { type: 'announce', from: myName, fromUuid: myUuid, personalPath: myPath });
   }, 8000));
@@ -2025,19 +2025,20 @@ function showTitlebar(show) { /* no-op in web */ }
 window.addEventListener('beforeunload', () => {
   if (connected && myName && myUuid) {
     const msg = { type: 'status', from: myName, fromUuid: myUuid, online: false, timestamp: Date.now() };
+    const blob = new Blob([JSON.stringify(msg)], { type: 'application/json' });
     for (const p of Object.values(peers)) {
-      try { navigator.sendBeacon(BASE + p.path, JSON.stringify(msg)); } catch (e) {}
+      try { navigator.sendBeacon(BASE + p.path, blob); } catch (e) {}
     }
   }
 });
 
-// === Visibility API — faster online/offline detection ===
-let hiddenPingTimer = null;
+// === Visibility API ===
 function sendOfflineStatus() {
   if (!connected || !myName || !myUuid) return;
   const msg = { type: 'status', from: myName, fromUuid: myUuid, online: false, timestamp: Date.now() };
+  const blob = new Blob([JSON.stringify(msg)], { type: 'application/json' });
   for (const p of Object.values(peers)) {
-    try { navigator.sendBeacon(BASE + p.path, JSON.stringify(msg)); } catch (e) {}
+    try { navigator.sendBeacon(BASE + p.path, blob); } catch (e) {}
     try { post(p.path, msg); } catch (e) {}
   }
 }
@@ -2051,12 +2052,7 @@ function sendOnlineStatus() {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     sendOfflineStatus();
-    if (hiddenPingTimer) clearInterval(hiddenPingTimer);
-    hiddenPingTimer = setInterval(() => {
-      if (document.hidden && connected) sendOfflineStatus();
-    }, 5000);
   } else {
-    if (hiddenPingTimer) { clearInterval(hiddenPingTimer); hiddenPingTimer = null; }
     sendOnlineStatus();
   }
 });
