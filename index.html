@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Piping Chat</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+    :root {
+      --bg-body: #0e0e1a; --bg-sidebar: #13132a; --bg-main: #0e0e1a;
+      --bg-topbar: #13132a; --bg-input: #1c1c36; --bg-msg-other: #1e1e3e;
+      --bg-ctx: #1a1a36; --bg-reply: #161630; --bg-panel: #1a1a36;
+      --bg-login: #13132a; --bg-toast: #1e1e3e;
+      --border: #2a2a4a; --border-focus: #333;
+      --text: #fff; --text-dim: #888; --text-dimmer: #555; --text-dimmest: #444; --text-chat-name: #777; --text-chat-time: #666;
+      --accent: #0084ff; --accent-hover: #006edb;
+      --hover-sidebar: #1e1e3e; --active-sidebar: #0084ff22;
+      --scrollbar: #333; --ctx-sep: #2a2a4a;
+    }
+    .light {
+      --bg-body: #f0f2f5; --bg-sidebar: #fff; --bg-main: #f0f2f5;
+      --bg-topbar: #fff; --bg-input: #f0f2f5; --bg-msg-other: #fff;
+      --bg-ctx: #fff; --bg-reply: #f8f9fa; --bg-panel: #fff;
+      --bg-login: #fff; --bg-toast: #fff;
+      --border: #e0e0e0; --border-focus: #ccc;
+      --text: #1a1a2e; --text-dim: #666; --text-dimmer: #999; --text-dimmest: #aaa; --text-chat-name: #555; --text-chat-time: #999;
+      --accent: #0084ff; --accent-hover: #006edb;
+      --hover-sidebar: #f5f5f5; --active-sidebar: #0084ff15;
+      --scrollbar: #ccc; --ctx-sep: #e8e8e8;
+    }
+
+    body { height: 100vh; display: flex; flex-direction: column; background: var(--bg-body); color: var(--text); overflow: hidden; }
+
+    #app-row { display: flex; flex: 1; overflow: hidden; }
+
+    #sidebar { width: 300px; background: var(--bg-sidebar); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+    #sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+    #sidebar-header h3 { font-size: 18px; margin-bottom: 12px; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: space-between; }
+    #theme-toggle { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 4px 10px; border-radius: 16px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    #theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    #new-chat-btn { width: 100%; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 8px; transition: background 0.2s; }
+    #new-chat-btn:hover { background: var(--accent-hover); }
+    #join-area { display: flex; gap: 6px; margin-bottom: 4px; }
+    #join-input { flex: 1; padding: 9px 12px; border: 1px solid var(--border-focus); border-radius: 8px; background: var(--bg-input); color: var(--text); font-size: 13px; outline: none; text-transform: uppercase; letter-spacing: 1px; }
+    #join-input:focus { border-color: var(--accent); }
+    #join-btn { padding: 9px 14px; background: #2ecc71; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+    #join-btn:hover { background: #27ae60; }
+    #chat-list { flex: 1; overflow-y: auto; padding: 6px; }
+    #chat-list::-webkit-scrollbar { width: 4px; }
+    #chat-list::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
+
+    .chat-item { padding: 10px 12px; border-radius: 10px; cursor: pointer; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+    .chat-item:hover { background: var(--hover-sidebar); }
+    .chat-item.active { background: var(--active-sidebar); }
+    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; flex-shrink: 0; }
+    .chat-info { flex: 1; min-width: 0; }
+    .chat-info .chat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+    .chat-info .chat-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-info .chat-time { font-size: 11px; color: var(--text-chat-time); flex-shrink: 0; }
+    .chat-info .chat-preview { font-size: 12px; color: var(--text-chat-name); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-item .del-chat { color: var(--text-dimmest); cursor: pointer; font-size: 16px; padding: 4px; border-radius: 4px; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+    .chat-item:hover .del-chat { opacity: 1; }
+    .chat-item .del-chat:hover { color: #f44; background: #f442; }
+    .unread-badge { background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; min-width: 20px; height: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0 6px; flex-shrink: 0; }
+
+    #main { flex: 1; display: flex; flex-direction: column; position: relative; }
+
+    #topbar { padding: 12px 20px; background: var(--bg-topbar); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    #topbar-left { display: flex; align-items: center; gap: 15px; }
+    #group-name { font-size: 16px; font-weight: 600; }
+    #group-subtitle { font-size: 12px; color: var(--text-dimmer); }
+    #clock { font-size: 12px; color: var(--text-dimmer); font-family: monospace; }
+    #topbar-right { display: flex; gap: 8px; align-items: center; }
+    .topbar-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+    .topbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    #participants-panel { display: none; position: absolute; top: 54px; right: 20px; background: var(--bg-panel); border: 1px solid var(--border-focus); border-radius: 10px; padding: 14px; min-width: 220px; z-index: 10; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+    #participants-panel.show { display: block; }
+    #participants-panel h4 { font-size: 12px; color: var(--text-dimmer); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .participant { padding: 6px 0; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .participant .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot-online { display:inline-block; width:8px; height:8px; border-radius:50%; background:#2ecc71; margin-right:4px; vertical-align:middle; animation:pulse 2s infinite; }
+    .status-dot-app { display:inline-block; width:8px; height:8px; border-radius:50%; border:2px solid #2ecc71; background:transparent; margin-right:4px; vertical-align:middle; }
+    .status-dot-offline { display:inline-block; width:8px; height:8px; border-radius:50%; background:#555; margin-right:4px; vertical-align:middle; }
+    @keyframes pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(46,204,113,0.4); } 50%{ box-shadow:0 0 0 4px rgba(46,204,113,0); } }
+
+    #search-panel { display: none; padding: 10px 16px; background: var(--bg-topbar); border-bottom: 1px solid var(--border); flex-direction: column; gap: 6px; }
+    #search-panel.show { display: flex; }
+    #search-main-row { display: flex; align-items: center; gap: 8px; }
+    #search-input { flex: 1; padding: 8px 14px; border: 1px solid var(--border-focus); border-radius: 20px; background: var(--bg-input); color: var(--text); font-size: 13px; outline: none; }
+    #search-input:focus { border-color: var(--accent); }
+    #search-close { background: none; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; padding: 4px 8px; }
+    #search-filters-toggle { background: none; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; padding: 4px 8px; }
+    #search-filters-toggle:hover { color: var(--accent); }
+    #search-filters { display: none; align-items: center; gap: 6px; flex-wrap: wrap; }
+    #search-filters.show { display: flex; }
+    .search-result-count { font-size: 12px; color: var(--text-dim); }
+
+    #messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; background: var(--bg-main); }
+    #messages::-webkit-scrollbar { width: 6px; }
+    #messages::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
+    .message { max-width: 60%; padding: 10px 14px; margin-bottom: 4px; border-radius: 16px; word-wrap: break-word; cursor: default; position: relative; animation: msgIn 0.15s ease; }
+    @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .message.you { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .message.other { align-self: flex-start; background: var(--bg-msg-other); color: var(--text); border-bottom-left-radius: 4px; border: 1px solid var(--border); }
+    .message .msg-header { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+    .message .sender { font-size: 12px; font-weight: 700; opacity: 0.9; }
+    .message .time { font-size: 10px; opacity: 0.45; }
+    .message .edited { font-size: 10px; opacity: 0.45; font-style: italic; }
+    .message img { max-width: 280px; max-height: 280px; border-radius: 10px; margin-top: 6px; display: block; cursor: pointer; }
+    .message .reply-ref { font-size: 11px; padding: 6px 10px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; opacity: 0.85; border-left: 3px solid rgba(128,128,128,0.3); background: rgba(128,128,128,0.06); }
+    .message.you .reply-ref { background: rgba(255,255,255,0.12); border-left-color: rgba(255,255,255,0.5); }
+    .message .reply-ref:hover { opacity: 1; }
+    .message .reply-ref .ref-name { font-weight: 700; font-size: 11px; margin-bottom: 1px; }
+    .message .reply-ref .ref-text { opacity: 0.6; font-size: 11px; }
+    .message .msg-text code { background: rgba(0,0,0,0.2); padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 13px; }
+    .message.you .msg-text code { background: rgba(255,255,255,0.2); }
+    .system-msg { text-align: center; color: var(--text-dimmest); font-size: 12px; padding: 6px 0; }
+    .room-code-msg { text-align: center; background: #0d2818; color: #2ecc71; font-size: 13px; padding: 12px; border-radius: 10px; margin: 8px 30px; border: 1px solid #2ecc7133; }
+    .light .room-code-msg { background: #e8f5e9; border-color: #2ecc7144; }
+    .room-code-msg b { font-family: monospace; font-size: 16px; letter-spacing: 2px; }
+    .typing-indicator { text-align: left; color: var(--text-dimmer); font-size: 12px; padding: 4px 8px; font-style: italic; }
+
+    .avatar-sm { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; vertical-align: middle; margin-right: 6px; }
+
+    #reply-bar { display: none; padding: 10px 16px; background: var(--bg-reply); border-top: 1px solid var(--border); align-items: center; gap: 10px; font-size: 13px; }
+    #reply-bar.show { display: flex; }
+    #reply-bar .reply-info { flex: 1; border-left: 3px solid var(--accent); padding-left: 10px; }
+    #reply-bar .reply-info .rb-name { font-weight: 700; color: var(--accent); font-size: 12px; }
+    #reply-bar .reply-info .rb-text { color: var(--text-dim); font-size: 12px; margin-top: 1px; }
+    #reply-bar .reply-close { cursor: pointer; color: var(--text-dimmer); font-size: 20px; padding: 2px 6px; border-radius: 4px; transition: all 0.15s; }
+    #reply-bar .reply-close:hover { color: #f44; background: #f442; }
+
+    #input-area { padding: 12px 16px; background: var(--bg-topbar); border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: center; }
+    #textInput { flex: 1; padding: 11px 16px; border: 1px solid var(--border); border-radius: 22px; background: var(--bg-input); color: var(--text); outline: none; font-size: 14px; transition: border-color 0.2s; }
+    #textInput:focus { border-color: var(--accent); }
+    #textInput:disabled { opacity: 0.3; }
+    #fileBtn, #sendBtn, #emojiBtn, #voiceBtn { padding: 11px 14px; border: none; border-radius: 22px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+    #voiceBtn { background: var(--bg-msg-other); color: var(--text-dim); border: 1px solid var(--border); font-size: 16px; }
+    #voiceBtn:hover { background: var(--hover-sidebar); }
+    #voiceBtn.recording { background: #e74c3c; color: #fff; border-color: #e74c3c; animation: voicePulse 1s infinite; }
+    @keyframes voicePulse { 0%,100% { box-shadow: 0 0 0 0 rgba(231,76,60,0.4); } 50% { box-shadow: 0 0 0 8px rgba(231,76,60,0); } }
+    #emojiBtn { background: var(--bg-msg-other); color: var(--text-dim); border: 1px solid var(--border); font-size: 16px; }
+    #emojiBtn:hover { background: var(--hover-sidebar); }
+    #fileBtn { background: var(--bg-msg-other); color: var(--text-dim); border: 1px solid var(--border); }
+    #fileBtn:hover { background: var(--hover-sidebar); color: var(--text); }
+    #sendBtn { background: var(--accent); color: #fff; }
+    #sendBtn:hover { background: var(--accent-hover); }
+    #sendBtn:disabled, #fileBtn:disabled { opacity: 0.25; cursor: default; }
+    #fileInput { display: none; }
+
+    .message audio { max-width: 260px; margin-top: 6px; display: block; }
+    .audio-msg-wrap { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+    .audio-msg-wrap .audio-icon { font-size: 24px; }
+    .audio-msg-wrap audio { flex: 1; max-width: 220px; height: 36px; }
+
+    #emoji-picker { display: none; position: absolute; bottom: 60px; left: 16px; background: var(--bg-ctx); border: 1px solid var(--border-focus); border-radius: 12px; padding: 10px; z-index: 50; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 320px; }
+    #emoji-picker.show { display: block; }
+    #emoji-picker .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+    #emoji-picker .emoji-item { font-size: 20px; padding: 4px; cursor: pointer; border-radius: 6px; text-align: center; transition: background 0.1s; }
+    #emoji-picker .emoji-item:hover { background: var(--hover-sidebar); }
+
+    #forward-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; }
+    #forward-modal.show { display: flex; }
+    #forward-box { background: var(--bg-login); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 360px; max-height: 400px; overflow-y: auto; }
+    #forward-box h3 { font-size: 16px; margin-bottom: 14px; }
+    .forward-chat-item { padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; transition: background 0.15s; }
+    .forward-chat-item:hover { background: var(--hover-sidebar); }
+
+    #export-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; }
+    #export-modal.show { display:flex; }
+    #export-box { background:var(--bg-login); border:1px solid var(--border); border-radius:16px; padding:24px; width:320px; color:var(--text); }
+    .export-opt:hover { border-color:var(--accent) !important; }
+    #group-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; }
+    #group-modal.show { display:flex; }
+    #group-modal-box { background:var(--bg-login); border:1px solid var(--border); border-radius:16px; padding:24px; width:360px; color:var(--text); }
+    .group-member-item { display:flex; align-items:center; gap:8px; padding:8px; border-radius:8px; }
+    .group-member-item:hover { background:var(--hover-sidebar); }
+    .group-member-item .remove-member { margin-left:auto; color:#e74c3c; cursor:pointer; font-size:16px; opacity:0.6; }
+    .group-member-item .remove-member:hover { opacity:1; }
+    #create-group-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; }
+    #create-group-modal.show { display:flex; }
+    #create-group-box { background:var(--bg-login); border:1px solid var(--border); border-radius:16px; padding:24px; width:360px; color:var(--text); }
+
+    #login-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 200; }
+    #login-modal.hidden { display: none; }
+    #login-box { background: var(--bg-login); border: 1px solid var(--border); border-radius: 16px; padding: 40px; width: 380px; text-align: center; }
+    #login-box h2 { margin-bottom: 6px; font-size: 24px; }
+    #login-box p { color: var(--text-dimmer); font-size: 13px; margin-bottom: 24px; }
+    #login-box input { width: 100%; padding: 12px 16px; margin-bottom: 14px; border: 1px solid var(--border-focus); border-radius: 10px; background: var(--bg-input); color: var(--text); font-size: 15px; outline: none; text-align: center; transition: border-color 0.2s; }
+    #login-box input:focus { border-color: var(--accent); }
+    #login-box button { width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 700; transition: background 0.2s; }
+    #login-box button:hover { background: var(--accent-hover); }
+
+    #ctx-menu { display: none; position: fixed; background: var(--bg-ctx); border: 1px solid var(--border-focus); border-radius: 10px; padding: 6px 0; z-index: 200; min-width: 170px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    #ctx-menu.show { display: block; }
+    #ctx-menu .ctx-item { padding: 9px 18px; font-size: 13px; cursor: pointer; color: var(--text); transition: all 0.1s; }
+    #ctx-menu .ctx-item:hover { background: var(--accent); color: #fff; }
+    #ctx-menu .ctx-sep { height: 1px; background: var(--ctx-sep); margin: 4px 10px; }
+
+      #settings-page { display: none; flex-direction: column; background: var(--bg-main); overflow-y: auto; }
+    #settings-page.show { display: flex; }
+    .settings-topbar { padding: 12px 20px; background: var(--bg-topbar); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .settings-topbar .back-btn { background: none; border: none; color: var(--accent); font-size: 14px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; }
+    .settings-topbar .back-btn:hover { background: var(--hover-sidebar); }
+    .settings-topbar h3 { font-size: 16px; font-weight: 600; }
+    .settings-content { flex: 1; padding: 20px; overflow-y: auto; }
+    .settings-content .settings-inner { max-width: 560px; margin: 0 auto; }
+    .settings-avatar { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 32px; color: #fff; margin: 0 auto 20px; }
+    .settings-name-display { text-align: center; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .settings-uuid-display { text-align: center; font-size: 12px; color: var(--text-dimmer); margin-bottom: 24px; word-break: break-all; font-family: monospace; }
+    .settings-section { background: var(--bg-panel); border-radius: 12px; padding: 4px 16px; margin-bottom: 16px; }
+    .settings-section-title { font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 0 4px; font-weight: 600; }
+    .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row .sr-left { display: flex; flex-direction: column; }
+    .settings-row .sr-label { font-size: 14px; }
+    .settings-row .sr-desc { font-size: 12px; color: var(--text-dimmer); margin-top: 2px; }
+    .settings-row .sr-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .settings-row .sr-value { font-size: 14px; color: var(--text-dim); text-align: right; max-width: 200px; word-break: break-all; }
+    .settings-btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+    .settings-btn.primary { background: var(--accent); color: #fff; }
+    .settings-btn.primary:hover { background: var(--accent-hover); }
+    .settings-btn.danger { background: #c0392b; color: #fff; }
+    .settings-btn.danger:hover { background: #e74c3c; }
+    .settings-btn.secondary { background: var(--bg-input); color: var(--text); border: 1px solid var(--border); }
+    .settings-btn.secondary:hover { background: var(--hover-sidebar); }
+    .settings-btn.green { background: #2ecc71; color: #fff; }
+    .settings-btn.green:hover { background: #27ae60; }
+    .settings-btn.purple { background: #8e44ad; color: #fff; }
+    .settings-btn.purple:hover { background: #9b59b6; }
+    .settings-rename-area { display: none; margin-top: 8px; }
+    .settings-rename-area.show { display: flex; gap: 6px; }
+    .settings-rename-area input { flex: 1; padding: 10px 14px; border: 1px solid var(--border-focus); border-radius: 8px; background: var(--bg-input); color: var(--text); font-size: 14px; outline: none; }
+    .settings-rename-area input:focus { border-color: var(--accent); }
+    .settings-rename-area button { padding: 10px 16px; background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .settings-select { padding: 8px 12px; border: 1px solid var(--border-focus); border-radius: 8px; background: var(--bg-input); color: var(--text); font-size: 13px; outline: none; cursor: pointer; }
+    .settings-select:focus { border-color: var(--accent); }
+    .settings-toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
+    .settings-toggle input { opacity: 0; width: 0; height: 0; }
+    .settings-toggle .toggle-slider { position: absolute; inset: 0; background: #555; border-radius: 12px; transition: 0.2s; }
+    .settings-toggle .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+    .settings-toggle input:checked + .toggle-slider { background: var(--accent); }
+    .settings-toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+    #sidebar-footer { padding: 14px 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: color 0.2s; }
+    #sidebar-footer:hover { color: var(--accent); }
+
+    #toast-container { position: fixed; bottom: 80px; right: 20px; z-index: 999; display: flex; flex-direction: column-reverse; gap: 8px; pointer-events: none; }
+    .toast { background: var(--bg-toast); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; color: var(--text); font-size: 13px; max-width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); animation: toastIn 0.3s ease, toastOut 0.3s ease 4.7s forwards; pointer-events: auto; line-height: 1.4; }
+    .toast-icon { font-size: 16px; margin-right: 6px; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+
+    #drop-overlay { display: none; position: fixed; inset: 0; background: rgba(0,132,255,0.15); z-index: 300; align-items: center; justify-content: center; pointer-events: none; }
+    #drop-overlay.show { display: flex; }
+    #drop-overlay span { background: var(--accent); color: #fff; padding: 20px 40px; border-radius: 16px; font-size: 18px; font-weight: 700; }
+
+    #pin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; z-index: 300; }
+    #pin-modal.show { display: flex; }
+    #pin-box { background: var(--bg-login); border: 1px solid var(--border); border-radius: 16px; padding: 36px; width: 320px; text-align: center; }
+    #pin-box h2 { font-size: 20px; margin-bottom: 16px; }
+    #pin-input { width: 100%; padding: 14px; margin-bottom: 14px; border: 1px solid var(--border-focus); border-radius: 10px; background: var(--bg-input); color: var(--text); font-size: 24px; outline: none; text-align: center; letter-spacing: 8px; }
+    #pin-input:focus { border-color: var(--accent); }
+    #pin-box button { width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 700; transition: background 0.2s; }
+    #pin-box button:hover { background: var(--accent-hover); }
+    #pin-error { color: #f44; font-size: 12px; margin-top: 6px; }
+
+    .ctx-item[data-action="autodelete"] { color: #f39c12; }
+
+    #menu-toggle { display:none; background:none; border:none; color:var(--text); font-size:22px; cursor:pointer; padding:8px; min-width:44px; min-height:44px; }
+
+    @media (max-width: 700px) {
+      #menu-toggle { display:flex; align-items:center; justify-content:center; }
+      #sidebar {
+        position:fixed; left:0; top:0; height:100%; width:300px; z-index:1000;
+        transform:translateX(-100%); transition:transform 0.3s ease;
+        box-shadow:none;
+      }
+      #sidebar.open { transform:translateX(0); box-shadow:2px 0 20px rgba(0,0,0,0.4); }
+      #sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; }
+      #sidebar-overlay.show { display:block; }
+      #app-row, #main { width:100%; }
+      .message { max-width:85%; padding:12px 16px; }
+      .topbar-btn, #emojiBtn, #voiceBtn, #fileBtn, #sendBtn { padding:12px 14px; font-size:16px; min-width:44px; min-height:44px; }
+      #textInput { font-size:16px; padding:12px 16px; }
+      .chat-item { padding:14px 12px; }
+      #clock { display:none; }
+    }
+    @media (max-width: 480px) {
+      .message { max-width:90%; }
+      #topbar { padding:10px 12px; }
+      #input-area { padding:10px 12px; gap:8px; }
+    }
+
+    /* Onboarding */
+    #onboarding { position:fixed; inset:0; background:var(--bg-body); z-index:9999; overflow-y:auto; display:none; }
+    #onboarding.show { display:flex; flex-direction:column; }
+    #onboarding-container { max-width:600px; margin:0 auto; padding:40px 20px; min-height:100vh; display:flex; flex-direction:column; justify-content:center; }
+    .onboarding-step { display:none; flex-direction:column; align-items:center; text-align:center; animation:onbFadeIn 0.3s ease; }
+    .onboarding-step.active { display:flex; }
+    @keyframes onbFadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    .onboarding-step input:focus { border-color:var(--accent); }
+    .theme-option { transition: border-color 0.2s, transform 0.2s; }
+    .theme-option:hover { transform:scale(1.02); }
+    .lang-option { transition: all 0.2s; padding:8px 16px; border:2px solid var(--border); border-radius:20px; background:var(--bg-input); color:var(--text); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; gap:6px; }
+    .lang-option:hover { background:var(--hover-sidebar); }
+    .lang-option.selected { border-color:var(--accent); background:var(--accent); color:#fff; }
+  </style>
+</head>
+<body>
+  <div id="onboarding">
+    <div id="onboarding-container">
+      <div class="onboarding-step active" data-step="0">
+        <div style="font-size:64px; margin-bottom:20px;">💬</div>
+        <h1 style="font-size:32px; margin-bottom:8px;">Добро пожаловать</h1>
+        <p style="color:var(--text-dim); font-size:16px; max-width:400px;">Ваш безопасный и простой мессенджер на основе Piping Server</p>
+        <button class="onboarding-next" style="margin-top:30px; background:var(--accent); color:#fff; border:none; padding:12px 40px; border-radius:30px; font-size:16px; font-weight:600; cursor:pointer;">Далее →</button>
+      </div>
+      <div class="onboarding-step" data-step="1">
+        <h2 style="font-size:24px; margin-bottom:8px;">Выберите язык</h2>
+        <p style="color:var(--text-dim); font-size:14px; margin-bottom:24px;">Выберите язык интерфейса</p>
+        <div id="onboarding-languages" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:480px;"></div>
+        <div style="margin-top:30px; display:flex; gap:12px;">
+          <button class="onboarding-back" style="background:transparent; color:var(--text-dim); border:1px solid var(--border); padding:10px 24px; border-radius:30px; cursor:pointer;">← Назад</button>
+          <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:10px 32px; border-radius:30px; font-weight:600; cursor:pointer;">Далее →</button>
+        </div>
+      </div>
+      <div class="onboarding-step" data-step="2">
+        <h2 style="font-size:24px; margin-bottom:8px;">Выберите тему</h2>
+        <p style="color:var(--text-dim); font-size:14px; margin-bottom:24px;">Светлая или тёмная</p>
+        <div style="display:flex; gap:20px;">
+          <div class="theme-option" data-theme="light" style="padding:16px 20px; border:2px solid var(--border); border-radius:12px; cursor:pointer; width:140px;">
+            <div style="background:#f0f2f5; border-radius:8px; padding:12px; display:flex; flex-direction:column; align-items:center;">
+              <div style="font-size:28px;">☀️</div>
+              <div style="font-size:14px; margin-top:4px; color:#1a1a2e;">Светлая</div>
+            </div>
+          </div>
+          <div class="theme-option" data-theme="dark" style="padding:16px 20px; border:2px solid var(--border); border-radius:12px; cursor:pointer; width:140px;">
+            <div style="background:#0e0e1a; border-radius:8px; padding:12px; display:flex; flex-direction:column; align-items:center;">
+              <div style="font-size:28px;">🌙</div>
+              <div style="font-size:14px; margin-top:4px; color:#fff;">Тёмная</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:30px; display:flex; gap:12px;">
+          <button class="onboarding-back" style="background:transparent; color:var(--text-dim); border:1px solid var(--border); padding:10px 24px; border-radius:30px; cursor:pointer;">← Назад</button>
+          <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:10px 32px; border-radius:30px; font-weight:600; cursor:pointer;">Далее →</button>
+        </div>
+      </div>
+      <div class="onboarding-step" data-step="3">
+        <h2 style="font-size:24px; margin-bottom:8px;">Ваше имя</h2>
+        <p style="color:var(--text-dim); font-size:14px; margin-bottom:24px;">Как к вам обращаться в чатах?</p>
+        <input id="onboarding-name" type="text" maxlength="20" placeholder="Введите имя" style="width:100%; max-width:300px; padding:12px 16px; border:1px solid var(--border); border-radius:10px; background:var(--bg-input); color:var(--text); font-size:16px; text-align:center; outline:none;">
+        <div id="onboarding-name-error" style="color:#e74c3c; font-size:13px; margin-top:6px; min-height:20px;"></div>
+        <div style="margin-top:30px; display:flex; gap:12px;">
+          <button class="onboarding-back" style="background:transparent; color:var(--text-dim); border:1px solid var(--border); padding:10px 24px; border-radius:30px; cursor:pointer;">← Назад</button>
+          <button class="onboarding-next" style="background:var(--accent); color:#fff; border:none; padding:10px 32px; border-radius:30px; font-weight:600; cursor:pointer;">Далее →</button>
+        </div>
+      </div>
+      <div class="onboarding-step" data-step="4">
+        <h2 style="font-size:24px; margin-bottom:16px;">Как это работает</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; max-width:500px; margin-bottom:24px;">
+          <div style="background:var(--bg-msg-other); border-radius:12px; padding:16px; border:1px solid var(--border);">
+            <div style="font-size:32px; margin-bottom:8px;">➕</div>
+            <div style="font-weight:600; font-size:14px;">Создайте чат</div>
+            <div style="font-size:12px; color:var(--text-dim);">Нажмите «+ Новый чат» – получите уникальный код</div>
+          </div>
+          <div style="background:var(--bg-msg-other); border-radius:12px; padding:16px; border:1px solid var(--border);">
+            <div style="font-size:32px; margin-bottom:8px;">🔑</div>
+            <div style="font-weight:600; font-size:14px;">Войдите по коду</div>
+            <div style="font-size:12px; color:var(--text-dim);">Введите код, чтобы присоединиться к существующему чату</div>
+          </div>
+          <div style="background:var(--bg-msg-other); border-radius:12px; padding:16px; border:1px solid var(--border);">
+            <div style="font-size:32px; margin-bottom:8px;">📎</div>
+            <div style="font-weight:600; font-size:14px;">Отправляйте файлы</div>
+            <div style="font-size:12px; color:var(--text-dim);">Изображения, голосовые сообщения и другие файлы</div>
+          </div>
+        </div>
+        <p style="font-size:13px; color:var(--text-dim); max-width:400px;">Все сообщения шифруются, а история хранится локально.</p>
+        <button id="onboarding-finish" style="margin-top:20px; background:var(--accent); color:#fff; border:none; padding:12px 48px; border-radius:30px; font-size:16px; font-weight:700; cursor:pointer;">🚀 Начать!</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="login-modal" class="hidden">
+    <div id="login-box">
+      <h2>Piping Chat</h2>
+      <p>Введите имя пользователя</p>
+      <input id="input-name" placeholder="Ваше имя" maxlength="20">
+      <button id="login-btn">Начать</button>
+    </div>
+  </div>
+
+  <div id="ctx-menu">
+    <div class="ctx-item" data-action="copy">Копировать</div>
+    <div class="ctx-item" data-action="reply">Ответить</div>
+    <div class="ctx-item" data-action="forward">Переслать</div>
+    <div class="ctx-item ctx-edit" data-action="edit">Редактировать</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item ctx-delete" data-action="delete">Удалить</div>
+    <div class="ctx-item ctx-delete" data-action="delete-self">Удалить у себя</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-action="autodelete">⏱ Автоудаление (5 мин)</div>
+  </div>
+
+  <div id="forward-modal">
+    <div id="forward-box">
+      <h3>Переслать в...</h3>
+      <div id="forward-list"></div>
+    </div>
+  </div>
+
+  <div id="export-modal">
+    <div id="export-box">
+      <h3 style="margin-bottom:12px;">Экспорт истории</h3>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Выберите формат:</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="export-opt" data-format="txt" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);cursor:pointer;text-align:left;">
+          <span style="font-size:22px;">📄</span>
+          <div><div style="font-weight:600;">TXT</div><div style="font-size:11px;color:var(--text-dim);">Простой текст</div></div>
+        </button>
+        <button class="export-opt" data-format="json" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);cursor:pointer;text-align:left;">
+          <span style="font-size:22px;">📦</span>
+          <div><div style="font-weight:600;">JSON</div><div style="font-size:11px;color:var(--text-dim);">Структурированные данные</div></div>
+        </button>
+        <button class="export-opt" data-format="html" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);cursor:pointer;text-align:left;">
+          <span style="font-size:22px;">🌐</span>
+          <div><div style="font-weight:600;">HTML</div><div style="font-size:11px;color:var(--text-dim);">Красивая веб-страница</div></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="group-modal">
+    <div id="group-modal-box">
+      <h3 style="margin-bottom:12px;">Управление группой</h3>
+      <div id="group-members-list" style="max-height:300px;overflow-y:auto;margin-bottom:12px;"></div>
+      <div id="group-add-area" style="display:flex;gap:6px;">
+        <input id="group-add-input" placeholder="Имя участника..." style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);font-size:13px;outline:none;">
+        <button id="group-add-btn" style="padding:8px 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-size:13px;">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="create-group-modal">
+    <div id="create-group-box">
+      <h3 style="margin-bottom:16px;">Новая группа</h3>
+      <label style="font-size:13px;color:var(--text-dim);margin-bottom:4px;display:block;">Название группы</label>
+      <input id="cg-name" type="text" maxlength="30" placeholder="Моя группа" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);font-size:14px;outline:none;margin-bottom:12px;">
+      <label style="font-size:13px;color:var(--text-dim);margin-bottom:4px;display:block;">Максимум участников</label>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <input id="cg-limit" type="range" min="3" max="50" value="10" style="flex:1;accent-color:var(--accent);">
+        <span id="cg-limit-val" style="font-size:14px;font-weight:600;min-width:30px;text-align:center;">10</span>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button id="cg-cancel" style="padding:8px 20px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-dim);cursor:pointer;font-size:13px;">Отмена</button>
+        <button id="cg-create" style="padding:8px 20px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Создать</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar-overlay"></div>
+
+  <div id="app-row">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h3>Piping Chat <button id="theme-toggle" title="Тема">☀</button></h3>
+      <button id="new-chat-btn">+ Новый чат</button>
+      <button id="new-group-btn" style="margin-top:4px;background:transparent;border:1px solid var(--accent);color:var(--accent);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;width:100%;font-weight:600;">👥 Создать группу</button>
+      <div id="join-area">
+        <input id="join-input" placeholder="PC-... или PG-..." maxlength="23">
+        <button id="join-btn">Войти</button>
+      </div>
+    </div>
+    <div id="chat-list"></div>
+    <div id="sidebar-footer">
+      <span id="footer-avatar" style="width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;flex-shrink:0;"></span>
+      <span id="footer-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <span id="settings-btn" title="Настройки" style="font-size:18px;flex-shrink:0;opacity:0.6;transition:opacity 0.15s;">⚙️</span>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="topbar">
+      <div id="topbar-left">
+        <button id="menu-toggle">☰</button>
+        <div>
+          <div id="group-name">Выберите чат</div>
+          <div id="group-subtitle"></div>
+        </div>
+        <span id="clock">--:--:--</span>
+      </div>
+      <div id="topbar-right">
+    <button class="topbar-btn" id="search-btn">Поиск</button>
+    <button class="topbar-btn" id="group-manage-btn" title="Управление группой" style="display:none;">👥</button>
+    <button class="topbar-btn" id="lock-btn" title="Блокировка">🔒</button>
+        <button class="topbar-btn" id="participants-toggle">Участники (0)</button>
+      </div>
+    </div>
+    <div id="search-panel">
+      <div id="search-main-row">
+        <input id="search-input" placeholder="Поиск в сообщениях...">
+        <span class="search-result-count" id="search-count"></span>
+        <button id="search-filters-toggle" title="Фильтры">⚙</button>
+        <button id="search-close">&times;</button>
+      </div>
+      <div id="search-filters" style="display:none;">
+        <input id="search-sender" placeholder="Отправитель..." list="sender-list" style="width:160px;padding:6px 10px;border:1px solid var(--border-focus);border-radius:8px;background:var(--bg-input);color:var(--text);font-size:12px;outline:none;">
+        <datalist id="sender-list"></datalist>
+        <label style="font-size:11px;color:var(--text-dim);">С:</label>
+        <input id="search-date-from" type="date" style="padding:6px 8px;border:1px solid var(--border-focus);border-radius:8px;background:var(--bg-input);color:var(--text);font-size:12px;outline:none;">
+        <label style="font-size:11px;color:var(--text-dim);">По:</label>
+        <input id="search-date-to" type="date" style="padding:6px 8px;border:1px solid var(--border-focus);border-radius:8px;background:var(--bg-input);color:var(--text);font-size:12px;outline:none;">
+      </div>
+    </div>
+    <div id="participants-panel">
+      <h4>Участники</h4>
+      <div id="participants-list"></div>
+    </div>
+    <div id="messages"></div>
+    <div id="typing-area"></div>
+    <div id="reply-bar">
+      <div class="reply-info">
+        <div class="rb-name" id="rb-name"></div>
+        <div class="rb-text" id="rb-text"></div>
+      </div>
+      <div class="reply-close" id="reply-close">&times;</div>
+    </div>
+    <div id="input-area">
+      <button id="emojiBtn" title="Эмодзи">😊</button>
+      <button id="voiceBtn" title="Голосовое сообщение">🎤</button>
+      <button id="fileBtn" disabled>📎</button>
+      <input type="text" id="textInput" placeholder="Сообщение..." disabled maxlength="5000" autocorrect="off" autocapitalize="off" autocomplete="off">
+      <button id="sendBtn" disabled>➤</button>
+      <input type="file" id="fileInput" multiple style="display:none;">
+    </div>
+    <div id="emoji-picker">
+      <div class="emoji-grid" id="emoji-grid"></div>
+    </div>
+    <div id="settings-page">
+      <div class="settings-topbar">
+        <button class="back-btn" id="settings-back">← Назад</button>
+        <h3>Настройки</h3>
+      </div>
+      <div class="settings-content">
+        <div class="settings-inner">
+          <div id="settings-avatar" class="settings-avatar"></div>
+          <div id="settings-name-display" class="settings-name-display"></div>
+          <div id="settings-uuid-display" class="settings-uuid-display"></div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Профиль</div>
+            <div class="settings-row">
+              <div class="sr-left">
+                <span class="sr-label">Имя</span>
+              </div>
+              <div class="sr-right">
+                <button class="settings-btn primary" id="settings-rename-btn">Изменить</button>
+              </div>
+            </div>
+            <div class="settings-rename-area" id="settings-rename-area">
+              <input id="settings-rename-input" placeholder="Новое имя" maxlength="20">
+              <button class="settings-btn primary" id="settings-rename-ok">OK</button>
+            </div>
+            <div class="settings-row">
+              <div class="sr-left">
+                <span class="sr-label">Чатов</span>
+              </div>
+              <div class="sr-right">
+                <span class="sr-value" id="settings-chats-count"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Внешний вид</div>
+            <div class="settings-row">
+              <div class="sr-left">
+                <span class="sr-label">Тема</span>
+                <span class="sr-desc">Тёмная или светлая</span>
+              </div>
+              <div class="sr-right">
+                <select class="settings-select" id="settings-theme-select">
+                  <option value="dark">Тёмная</option>
+                  <option value="light">Светлая</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Безопасность</div>
+            <div class="settings-row">
+              <div class="sr-left">
+                <span class="sr-label">PIN-код</span>
+                <span class="sr-desc" id="settings-pin-status">Не установлен</span>
+              </div>
+              <div class="sr-right">
+                <button class="settings-btn purple" id="settings-pin-btn">Настроить</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="sr-left">
+                <span class="sr-label">Автоблокировка</span>
+                <span class="sr-desc">Автоматическая блокировка при бездействии</span>
+              </div>
+              <div class="sr-right">
+                <select class="settings-select" id="settings-autolock-select">
+                  <option value="0">Отключено</option>
+                  <option value="1">1 минута</option>
+                  <option value="5">5 минут</option>
+                  <option value="15">15 минут</option>
+                  <option value="30">30 минут</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Данные</div>
+            <div class="settings-row">
+              <div class="sr-left">
+                <span class="sr-label">Экспорт истории</span>
+                <span class="sr-desc">Сохранить историю текущего чата</span>
+              </div>
+              <div class="sr-right">
+                <button class="settings-btn green" id="settings-export-btn">Экспорт</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">О приложении</div>
+            <div class="settings-row">
+              <div class="sr-left"><span class="sr-label">Версия</span></div>
+              <div class="sr-right"><span class="sr-value">2.8.0</span></div>
+            </div>
+            <div class="settings-row">
+              <div class="sr-left"><span class="sr-label">UUID</span></div>
+              <div class="sr-right"><span class="sr-value" id="settings-uuid-val" style="font-family:monospace;font-size:11px;"></span></div>
+            </div>
+          </div>
+
+          <div style="padding:8px 0;">
+            <button class="settings-btn danger" id="settings-reset-btn" style="width:100%;padding:12px;">Сбросить все данные</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <div id="drop-overlay"><span>Перетащите файл для отправки</span></div>
+
+  <div id="pin-modal">
+    <div id="pin-box">
+      <h2>🔒 Введите PIN</h2>
+      <input id="pin-input" type="password" maxlength="6" placeholder="PIN">
+      <button id="pin-ok-btn">Войти</button>
+      <div id="pin-error"></div>
+    </div>
+  </div>
+
+  <div id="img-viewer" style="display:none;pointer-events:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;align-items:center;justify-content:center;flex-direction:column;">
+    <div id="img-viewer-close" style="position:absolute;top:16px;right:24px;font-size:32px;color:#fff;cursor:pointer;z-index:501;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.1);transition:background 0.2s;">&times;</div>
+    <img id="img-viewer-img" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.6);cursor:zoom-out;transition:transform 0.2s;">
+    <div id="img-viewer-info" style="margin-top:12px;color:#888;font-size:13px;"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
