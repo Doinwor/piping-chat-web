@@ -43,7 +43,6 @@ let myUuid, myName, activeRoom, myPath, announcePath, joinPath;
 let peers = {};
 let connected = false;
 let timers = [];
-let ackTimers = {};
 let typingTimers = {};
 let chats = {};
 let history = {};
@@ -306,7 +305,7 @@ function sendVoiceMsg(audioSrc) {
     const m = history[activeRoom]?.find(x => x.id === msg.id);
     if (m && m.status === 'sending') { m.status = 'sent'; saveHistory(activeRoom); updateMessageStatusUI(msg.id); }
   }, 1500);
-  scheduleAckTimers(msg);
+
 }
 
 // === Search ===
@@ -481,7 +480,6 @@ function getMsgStatusText(status) {
     case 'sent': return '✓';
     case 'delivered': return '✓✓';
     case 'read': return '✓✓';
-    case 'not_delivered': return '⚠️ не доставлено';
     default: return '';
   }
 }
@@ -489,7 +487,6 @@ function getMsgStatusColor(status) {
   switch (status) {
     case 'read': return isLightTheme ? '#1976d2' : '#4fc3f7';
     case 'delivered': return isLightTheme ? '#1976d2' : '#4fc3f7';
-    case 'not_delivered': return '#f39c12';
     case 'sent': return isLightTheme ? '#888' : 'rgba(255,255,255,0.5)';
     default: return isLightTheme ? '#aaa' : 'rgba(255,255,255,0.3)';
   }
@@ -1087,8 +1084,7 @@ settingsResetBtn.onclick = () => {
   chats = {}; history = {}; myName = ''; myUuid = '';
   connected = false;
   timers.forEach(t => clearInterval(t));
-  Object.values(ackTimers).forEach(t => clearTimeout(t));
-  timers = []; ackTimers = {}; peers = {}; activeRoom = '';
+  timers = []; peers = {}; activeRoom = '';
   unreadCounts = {};
   showChat();
   groupName.textContent = 'Выберите чат';
@@ -1304,7 +1300,6 @@ function forwardMessage(targetRoom) {
     updateChatLastMsg(activeRoom, myName, msg.text);
     const encMsg = { ...localMsg, text: xorCode(msg.text, activeRoom) };
     for (const p of Object.values(peers)) post(p.path, encMsg);
-    scheduleAckTimers(localMsg);
   } else if (msg.type === 'image') {
     const localMsg = { id: genId(), type: 'image', from: myName, fromUuid: myUuid, src: msg.src, timestamp: Date.now(), replyTo: null, status: 'sending' };
     createMsgEl(localMsg, true);
@@ -1313,7 +1308,6 @@ function forwardMessage(targetRoom) {
     updateChatLastMsg(activeRoom, myName, '[изображение]');
     const encMsg = { ...localMsg, src: xorCode(msg.src, activeRoom) };
     for (const p of Object.values(peers)) post(p.path, encMsg);
-    scheduleAckTimers(localMsg);
   } else if (msg.type === 'audio') {
     const localMsg = { id: genId(), type: 'audio', from: myName, fromUuid: myUuid, src: msg.src, timestamp: Date.now(), status: 'sending' };
     createMsgEl(localMsg, true);
@@ -1322,7 +1316,6 @@ function forwardMessage(targetRoom) {
     updateChatLastMsg(activeRoom, myName, '[голосовое]');
     const encMsg = { ...localMsg, src: xorCode(msg.src, activeRoom) };
     for (const p of Object.values(peers)) post(p.path, encMsg);
-    scheduleAckTimers(localMsg);
   }
   forwardTarget = null;
 }
@@ -1338,7 +1331,7 @@ async function listen() {
       if (history[activeRoom]) {
         const m = history[activeRoom].find(x => x.id === data.targetId);
         if (m && m.fromUuid === myUuid) {
-          const priority = { 'read': 4, 'delivered': 3, 'sent': 2, 'not_delivered': 1, 'sending': 0 };
+          const priority = { 'read': 4, 'delivered': 3, 'sent': 2, 'sending': 0 };
           const cur = priority[m.status] || 0;
           const incoming = priority[data.status] || 0;
           if (incoming > cur) {
@@ -1595,33 +1588,11 @@ function checkStale() {
       changed = true;
       addSystem(`${p.name} не в сети`);
       showToast(`${p.name} не в сети — возможно, закрыл приложение`);
-      if (history[activeRoom]) {
-        history[activeRoom].filter(m => m.fromUuid === myUuid && m.status !== 'read' && m.status !== 'delivered').forEach(m => {
-          m.status = 'not_delivered';
-          updateMessageStatusUI(m.id);
-        });
-        saveHistory(activeRoom);
-      }
     }
   }
   if (changed) renderParticipants();
 }
 
-function scheduleAckTimers(msg) {
-  if (!msg || !msg.id) return;
-  if (ackTimers[msg.id]) clearTimeout(ackTimers[msg.id]);
-  ackTimers[msg.id] = setTimeout(() => {
-    if (history[activeRoom]) {
-      const m = history[activeRoom].find(x => x.id === msg.id);
-      if (m && (m.status === 'sending' || m.status === 'sent')) {
-        m.status = 'not_delivered';
-        saveHistory(activeRoom);
-        updateMessageStatusUI(msg.id);
-      }
-    }
-    delete ackTimers[msg.id];
-  }, 30000);
-}
 
 function connect() {
   myPath = `/room/${activeRoom}/${myUuid}`;
@@ -1770,7 +1741,7 @@ function processImageFile(file) {
         const m = history[activeRoom]?.find(x => x.id === msg.id);
         if (m && m.status === 'sending') { m.status = 'sent'; saveHistory(activeRoom); updateMessageStatusUI(msg.id); }
       }, 1500);
-      scheduleAckTimers(msg);
+    
     };
     img.src = reader.result;
   };
@@ -1807,7 +1778,7 @@ function sendMsg() {
       if (m && m.status === 'sending') { m.status = 'sent'; saveHistory(activeRoom); updateMessageStatusUI(msg.id); }
     }
   }, 1500);
-  scheduleAckTimers(msg);
+
 }
 
 function finishEdit() {
@@ -1844,9 +1815,8 @@ function cancelEdit() {
 function disconnect() {
   connected = false;
   timers.forEach(t => clearInterval(t));
-  Object.values(ackTimers).forEach(t => clearTimeout(t));
   Object.values(typingTimers).forEach(t => clearTimeout(t));
-  timers = []; ackTimers = {}; typingTimers = {};
+  timers = []; typingTimers = {};
   peers = {};
   textInput.disabled = true; sendBtn.disabled = true; fileBtn.disabled = true;
   cancelEdit(); hideReplyBar();
