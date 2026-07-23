@@ -1435,24 +1435,17 @@ async function listen() {
       }
     } else if (data.type === 'status') {
       if (peers[data.fromUuid]) {
-        const wasOnline = peers[data.fromUuid].online;
         peers[data.fromUuid].online = data.online;
         peers[data.fromUuid].lastSeen = Date.now();
-        if (data.online && peers[data.fromUuid].peerStatus !== 'in_chat') {
+        if (data.online) {
           peers[data.fromUuid].peerStatus = 'in_app';
           if (!isGroupCode(activeRoom) && chats[activeRoom]) chats[activeRoom].peerStatus = 'in_app';
+        } else {
+          peers[data.fromUuid].peerStatus = 'offline';
+          if (!isGroupCode(activeRoom) && chats[activeRoom]) chats[activeRoom].peerStatus = 'offline';
         }
         renderParticipants();
         renderChatList();
-        if (!wasOnline && data.online) {
-          addSystem(`${data.from} в сети`);
-          showToast(`${data.from} в сети`);
-        } else if (wasOnline && !data.online) {
-          peers[data.fromUuid].peerStatus = 'offline';
-          if (!isGroupCode(activeRoom) && chats[activeRoom]) chats[activeRoom].peerStatus = 'offline';
-          addSystem(`${data.from} не в сети`);
-          showToast(`${data.from} не в сети — сообщения будут доставлены при подключении`);
-        }
       }
     } else if (data.type === 'delete' || data.type === 'delete_request') {
       if (history[activeRoom]) {
@@ -1646,13 +1639,11 @@ function checkStale() {
   const now = Date.now();
   let changed = false;
   for (const [uuid, p] of Object.entries(peers)) {
-    if (p.online && (now - p.lastSeen) > 45000) {
+    if (p.online && (now - p.lastSeen) > 60000) {
       p.online = false;
       p.peerStatus = 'offline';
       if (!isGroupCode(activeRoom) && chats[activeRoom]) chats[activeRoom].peerStatus = 'offline';
       changed = true;
-      addSystem(`${p.name} не в сети`);
-      showToast(`${p.name} не в сети — сообщения будут доставлены при подключении`);
     }
   }
   if (changed) { renderParticipants(); renderChatList(); }
@@ -2089,7 +2080,7 @@ document.addEventListener('visibilitychange', () => {
     sendOfflineStatus();
   } else {
     if (onlineDebounce) clearTimeout(onlineDebounce);
-    onlineDebounce = setTimeout(() => { onlineDebounce = null; sendOnlineStatus(); }, 2000);
+    onlineDebounce = setTimeout(() => { onlineDebounce = null; sendOnlineStatus(); }, 3000);
   }
 });
 window.addEventListener('pagehide', sendOfflineStatus);
