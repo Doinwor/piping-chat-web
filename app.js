@@ -2034,8 +2034,9 @@ const sidebarEl = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 function openSidebar() { sidebarEl.classList.add('open'); sidebarOverlay.classList.add('show'); }
 function closeSidebar() { sidebarEl.classList.remove('open'); sidebarOverlay.classList.remove('show'); }
-if (menuToggle) menuToggle.onclick = () => { sidebarEl.classList.contains('open') ? closeSidebar() : openSidebar(); };
+if (menuToggle) menuToggle.onclick = (e) => { e.stopPropagation(); sidebarEl.classList.contains('open') ? closeSidebar() : openSidebar(); };
 if (sidebarOverlay) sidebarOverlay.onclick = closeSidebar;
+if (sidebarEl) sidebarEl.addEventListener('click', (e) => e.stopPropagation());
 document.getElementById('main').addEventListener('click', closeSidebar);
 let touchStartX = 0;
 document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
