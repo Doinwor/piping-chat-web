@@ -24,10 +24,25 @@ function isValidRoomCode(code) {
 function isGroupCode(code) {
   return code.startsWith('PG-');
 }
-function xorCode(data, key) {
-  let r = '';
-  for (let i = 0; i < data.length; i++) r += String.fromCharCode(data.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  return r;
+function xorEncode(data, key) {
+  const enc = new TextEncoder();
+  const src = enc.encode(data);
+  const k = enc.encode(key);
+  const out = new Uint8Array(src.length);
+  for (let i = 0; i < src.length; i++) out[i] = src[i] ^ k[i % k.length];
+  let binary = '';
+  for (let i = 0; i < out.length; i++) binary += String.fromCharCode(out[i]);
+  return btoa(binary);
+}
+function xorDecode(data, key) {
+  const binary = atob(data);
+  const enc = new TextEncoder();
+  const k = enc.encode(key);
+  const src = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) src[i] = binary.charCodeAt(i);
+  const out = new Uint8Array(src.length);
+  for (let i = 0; i < src.length; i++) out[i] = src[i] ^ k[i % k.length];
+  return new TextDecoder().decode(out);
 }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 
@@ -314,7 +329,7 @@ function sendVoiceMsg(audioSrc) {
   const msgRoom = activeRoom;
   if (history[msgRoom]) { history[msgRoom].push(msg); saveHistory(msgRoom); }
   updateChatLastMsg(msgRoom, myName, '[голосовое]');
-  const encMsg = { ...msg, src: xorCode(audioSrc, msgRoom) };
+  const encMsg = { ...msg, src: xorEncode(audioSrc, msgRoom) };
   for (const p of Object.values(peers)) post(p.path, encMsg);
   setTimeout(() => {
     const m = history[msgRoom]?.find(x => x.id === msg.id);
@@ -476,8 +491,19 @@ setInterval(() => { clockEl.textContent = new Date().toLocaleTimeString(); }, 10
 clockEl.textContent = new Date().toLocaleTimeString();
 
 // === Network ===
-function post(targetPath, data) {
-  return fetch(BASE + targetPath, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).catch(e => console.error('POST error:', e.message));
+function post(targetPath, data, retries = 2) {
+  const body = JSON.stringify(data);
+  return fetch(BASE + targetPath, { method: 'POST', body }).then(r => {
+    if (!r.ok && retries > 0) {
+      console.warn('POST failed', r.status, 'retrying...', targetPath);
+      return new Promise(resolve => setTimeout(() => resolve(post(targetPath, data, retries - 1)), 1000));
+    }
+    if (!r.ok) console.error('POST failed:', r.status, targetPath);
+    return r;
+  }).catch(e => {
+    console.error('POST error:', e.message, targetPath);
+    if (retries > 0) return new Promise(resolve => setTimeout(() => resolve(post(targetPath, data, retries - 1)), 1000));
+  });
 }
 async function get(targetPath, timeout) {
   try {
@@ -1330,7 +1356,7 @@ function forwardMessage(targetRoom) {
     receivedIds.add(localMsg.id);
     if (history[activeRoom]) { history[activeRoom].push(localMsg); saveHistory(activeRoom); }
     updateChatLastMsg(activeRoom, myName, msg.text);
-    const encMsg = { ...localMsg, text: xorCode(msg.text, activeRoom) };
+    const encMsg = { ...localMsg, text: xorEncode(msg.text, activeRoom) };
     for (const p of Object.values(peers)) post(p.path, encMsg);
   } else if (msg.type === 'image') {
     const localMsg = { id: genId(), type: 'image', from: myName, fromUuid: myUuid, src: msg.src, timestamp: Date.now(), replyTo: null, status: 'sending' };
@@ -1338,7 +1364,7 @@ function forwardMessage(targetRoom) {
     receivedIds.add(localMsg.id);
     if (history[activeRoom]) { history[activeRoom].push(localMsg); saveHistory(activeRoom); }
     updateChatLastMsg(activeRoom, myName, '[изображение]');
-    const encMsg = { ...localMsg, src: xorCode(msg.src, activeRoom) };
+    const encMsg = { ...localMsg, src: xorEncode(msg.src, activeRoom) };
     for (const p of Object.values(peers)) post(p.path, encMsg);
   } else if (msg.type === 'audio') {
     const localMsg = { id: genId(), type: 'audio', from: myName, fromUuid: myUuid, src: msg.src, timestamp: Date.now(), status: 'sending' };
@@ -1346,7 +1372,7 @@ function forwardMessage(targetRoom) {
     receivedIds.add(localMsg.id);
     if (history[activeRoom]) { history[activeRoom].push(localMsg); saveHistory(activeRoom); }
     updateChatLastMsg(activeRoom, myName, '[голосовое]');
-    const encMsg = { ...localMsg, src: xorCode(msg.src, activeRoom) };
+    const encMsg = { ...localMsg, src: xorEncode(msg.src, activeRoom) };
     for (const p of Object.values(peers)) post(p.path, encMsg);
   }
   forwardTarget = null;
@@ -1452,7 +1478,7 @@ async function listen() {
       }
     } else if (data.type === 'text') {
       if (!receivedIds.has(data.id)) {
-        try { data.text = xorCode(data.text, activeRoom); } catch (e) {}
+        try { data.text = xorDecode(data.text, activeRoom); } catch (e) {}
         receivedIds.add(data.id);
         if (history[activeRoom]) { history[activeRoom].push(data); saveHistory(activeRoom); }
         createMsgEl(data, false);
@@ -1463,7 +1489,7 @@ async function listen() {
         if (!document.hasFocus()) incrementUnread(activeRoom);
       }
     } else if (data.type === 'text_edit') {
-      try { data.text = xorCode(data.text, activeRoom); } catch (e) {}
+      try { data.text = xorDecode(data.text, activeRoom); } catch (e) {}
       if (history[activeRoom]) {
         const m = history[activeRoom].find(x => x.id === data.id);
         if (m) { m.text = data.text; m.edited = true; }
@@ -1483,7 +1509,7 @@ async function listen() {
       }
     } else if (data.type === 'image') {
       if (!receivedIds.has(data.id)) {
-        try { data.src = xorCode(data.src, activeRoom); } catch (e) {}
+        try { data.src = xorDecode(data.src, activeRoom); } catch (e) {}
         receivedIds.add(data.id);
         if (history[activeRoom]) { history[activeRoom].push(data); saveHistory(activeRoom); }
         createMsgEl(data, false);
@@ -1495,7 +1521,7 @@ async function listen() {
       }
     } else if (data.type === 'audio') {
       if (!receivedIds.has(data.id)) {
-        try { data.src = xorCode(data.src, activeRoom); } catch (e) {}
+        try { data.src = xorDecode(data.src, activeRoom); } catch (e) {}
         receivedIds.add(data.id);
         if (history[activeRoom]) { history[activeRoom].push(data); saveHistory(activeRoom); }
         createMsgEl(data, false);
@@ -1767,14 +1793,14 @@ function processImageFile(file) {
         src = canvas.toDataURL('image/jpeg', 0.8);
       }
       const rpl = replyTo ? { id: replyTo.id, from: replyTo.from, text: replyTo.text || null } : null;
-      const encRpl = rpl ? { id: rpl.id, from: rpl.from, text: rpl.text ? xorCode(rpl.text, activeRoom) : null } : null;
+      const encRpl = rpl ? { id: rpl.id, from: rpl.from, text: rpl.text ? xorEncode(rpl.text, activeRoom) : null } : null;
       const msg = { id: genId(), type: 'image', from: myName, fromUuid: myUuid, src, timestamp: Date.now(), replyTo: rpl, status: 'sending' };
       createMsgEl(msg, true);
       receivedIds.add(msg.id);
       const msgRoom = activeRoom;
       if (history[msgRoom]) { history[msgRoom].push(msg); saveHistory(msgRoom); }
       updateChatLastMsg(msgRoom, myName, '[изображение]');
-      const encMsg = { ...msg, src: xorCode(src, msgRoom), replyTo: encRpl };
+      const encMsg = { ...msg, src: xorEncode(src, msgRoom), replyTo: encRpl };
       for (const p of Object.values(peers)) post(p.path, encMsg);
       hideReplyBar();
       setTimeout(() => {
@@ -1810,8 +1836,8 @@ function sendMsg() {
   textInput.value = '';
   hideReplyBar();
   textInput.placeholder = 'Сообщение...';
-  const encRpl = rpl ? { id: rpl.id, from: rpl.from, text: rpl.text ? xorCode(rpl.text, msgRoom) : null } : null;
-  const encMsg = { ...msg, text: xorCode(text, msgRoom), replyTo: encRpl };
+  const encRpl = rpl ? { id: rpl.id, from: rpl.from, text: rpl.text ? xorEncode(rpl.text, msgRoom) : null } : null;
+  const encMsg = { ...msg, text: xorEncode(text, msgRoom), replyTo: encRpl };
   for (const p of Object.values(peers)) post(p.path, encMsg);
   setTimeout(() => {
     if (history[msgRoom]) {
@@ -1843,7 +1869,7 @@ function finishEdit() {
       senderDiv.parentNode.appendChild(ed);
     }
   }
-  for (const p of Object.values(peers)) post(p.path, { type: 'text_edit', id: editId, from: myName, fromUuid: myUuid, text: xorCode(text, activeRoom), timestamp: Date.now() });
+  for (const p of Object.values(peers)) post(p.path, { type: 'text_edit', id: editId, from: myName, fromUuid: myUuid, text: xorEncode(text, activeRoom), timestamp: Date.now() });
   cancelEdit();
 }
 
