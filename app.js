@@ -1359,6 +1359,13 @@ async function listen() {
     if (!data) { if (!connected) break; await new Promise(r => setTimeout(r, 300)); continue; }
     if (data.fromUuid === myUuid) continue;
 
+    if (!peers[data.fromUuid] && data.fromUuid && data.personalPath) {
+      peers[data.fromUuid] = { name: data.from, path: data.personalPath, online: true, lastSeen: Date.now(), peerStatus: 'in_chat' };
+    } else if (!peers[data.fromUuid] && data.fromUuid && myPath) {
+      const peerPath = myPath.replace('/' + myUuid, '/' + data.fromUuid);
+      peers[data.fromUuid] = { name: data.from || 'Unknown', path: peerPath, online: true, lastSeen: Date.now(), peerStatus: 'in_chat' };
+    }
+
     if (data.type === 'ack') {
       if (history[activeRoom]) {
         const m = history[activeRoom].find(x => x.id === data.targetId);
@@ -2033,8 +2040,10 @@ window.addEventListener('beforeunload', () => {
 });
 
 // === Visibility API ===
+let onlineDebounce = null;
 function sendOfflineStatus() {
   if (!connected || !myName || !myUuid) return;
+  if (onlineDebounce) { clearTimeout(onlineDebounce); onlineDebounce = null; }
   const msg = { type: 'status', from: myName, fromUuid: myUuid, online: false, timestamp: Date.now() };
   const blob = new Blob([JSON.stringify(msg)], { type: 'application/json' });
   for (const p of Object.values(peers)) {
@@ -2053,7 +2062,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     sendOfflineStatus();
   } else {
-    sendOnlineStatus();
+    if (onlineDebounce) clearTimeout(onlineDebounce);
+    onlineDebounce = setTimeout(() => { onlineDebounce = null; sendOnlineStatus(); }, 2000);
   }
 });
 window.addEventListener('pagehide', sendOfflineStatus);
